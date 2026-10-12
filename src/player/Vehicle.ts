@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Physics, RAPIER } from '../engine/Physics';
 import { InputState } from '../engine/Input';
 import { paintedMaterial } from '../render/PaintedMaterial';
@@ -38,13 +37,7 @@ export class Vehicle {
   readonly body: RAPIER.RigidBody;
   readonly controller: RAPIER.DynamicRayCastVehicleController;
   readonly mesh: THREE.Group;
-  private readonly fallbackModel: THREE.Group;
-  private readonly contactShadow: THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial>;
   private wheels: THREE.Object3D[] = [];
-  private importedWheels: { pivot: THREE.Group; index: number; original: THREE.Quaternion }[] = [];
-  private importedWheelAxis = new THREE.Vector3(0, 0, 1);
-  private importedUpAxis = new THREE.Vector3(0, 1, 0);
-  private importedModel: THREE.Group | null = null;
   private steer = 0;
   private prevPos = new THREE.Vector3();
   private currPos = new THREE.Vector3();
@@ -57,7 +50,7 @@ export class Vehicle {
   occupied = false;
   private upsideTimer = 0;
 
-  constructor(private physics: Physics, private w: WorldData, scene: THREE.Scene, pos: THREE.Vector3, heading: number) {
+  constructor(physics: Physics, private w: WorldData, scene: THREE.Scene, pos: THREE.Vector3, heading: number) {
     const c = SEDAN;
     const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), heading);
     this.body = physics.world.createRigidBody(
@@ -92,118 +85,21 @@ export class Vehicle {
       this.controller.setWheelSideFrictionStiffness(i, 1.0);
     }
 
-    this.mesh = new THREE.Group();
-    this.fallbackModel = this.buildModel();
-    this.mesh.add(this.fallbackModel);
-    const shadowGeometry = new THREE.PlaneGeometry(5.25, 2.55);
-    shadowGeometry.rotateX(-Math.PI / 2);
-    this.contactShadow = new THREE.Mesh(shadowGeometry, new THREE.ShaderMaterial({
-      uniforms: { opacity: { value: 0.34 } },
-      vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-      fragmentShader: 'varying vec2 vUv; uniform float opacity; void main() { vec2 p = (vUv - 0.5) * 2.0; float fade = 1.0 - smoothstep(0.25, 1.0, length(p)); gl_FragColor = vec4(0.09, 0.08, 0.07, opacity * fade); }',
-      transparent: true,
-      depthWrite: false,
-    }));
-    this.contactShadow.renderOrder = 1;
-    scene.add(this.contactShadow);
+    this.mesh = this.buildModel();
     scene.add(this.mesh);
     this.snapshot();
     this.snapshot();
   }
 
-  /** Instala el Fiat Uno descargado, conservando el auto procedural si falla la carga. */
-  async loadModel(url: string): Promise<void> {
-    try {
-      const gltf = await new GLTFLoader().loadAsync(url);
-      const model = gltf.scene;
-      model.updateMatrixWorld(true);
-      const wheelMeshes = new Map<string, THREE.Mesh>();
-      model.traverse((object) => {
-        if (!(object instanceof THREE.Mesh)) return;
-        object.castShadow = true;
-        object.receiveShadow = true;
-        if (object.material instanceof THREE.MeshStandardMaterial && object.material.name === 'Body') {
-          // La textura contiene los detalles de la carrocería y los vidrios.
-          // Lambert conserva ese dibujo sin reflejos especulares en la pintura.
-          object.material = new THREE.MeshLambertMaterial({
-            name: 'Body mate',
-            map: object.material.map,
-            color: new THREE.Color().setRGB(1.85, 1.85, 1.85),
-          });
-        }
-        let parent: THREE.Object3D | null = object.parent;
-        while (parent) {
-          const key = /Wheel_(FL|FR|RL|RR)/.exec(parent.name)?.[1];
-          if (key) { wheelMeshes.set(key, object); break; }
-          parent = parent.parent;
-        }
-      });
-
-      // El archivo de Sketchfab llega inclinado respecto de los ejes del juego.
-      // Los centros de las ruedas definen el frente de forma estable.
-      const center = (name: string) => new THREE.Box3().setFromObject(wheelMeshes.get(name)!).getCenter(new THREE.Vector3());
-      const fl = center('FL'), fr = center('FR'), rl = center('RL'), rr = center('RR');
-      const front = fl.clone().add(fr).multiplyScalar(0.5);
-      const rear = rl.clone().add(rr).multiplyScalar(0.5);
-      const forward = front.sub(rear).normalize();
-      const right = fr.clone().add(rr).sub(fl).sub(rl).normalize();
-      const up = new THREE.Vector3().crossVectors(right, forward).normalize();
-      const axle = new THREE.Vector3().crossVectors(forward, up).normalize();
-      if (!Number.isFinite(forward.x) || forward.lengthSq() < 0.9 || up.lengthSq() < 0.9) throw new Error('Ejes del modelo inválidos');
-      this.importedWheelAxis.copy(axle);
-      this.importedUpAxis.copy(up);
-      const orientation = new THREE.Quaternion()
-        .setFromRotationMatrix(new THREE.Matrix4().makeBasis(forward, up, axle)).invert();
-      const wheelIndex: Record<string, number> = { FL: 1, FR: 0, RL: 3, RR: 2 };
-      this.importedWheels = [];
-      for (const [name, wheel] of wheelMeshes) {
-        const pivot = new THREE.Group();
-        pivot.position.copy(center(name));
-        model.add(pivot);
-        model.updateMatrixWorld(true);
-        pivot.attach(wheel);
-        this.importedWheels.push({ pivot, index: wheelIndex[name], original: pivot.quaternion.clone() });
-      }
-
-      const bounds = new THREE.Box3().setFromObject(model);
-      model.position.sub(bounds.getCenter(new THREE.Vector3()));
-      const fitted = new THREE.Group();
-      fitted.add(model);
-      fitted.quaternion.copy(orientation);
-      fitted.updateMatrixWorld(true);
-      const size = new THREE.Box3().setFromObject(fitted).getSize(new THREE.Vector3());
-      const scale = 1.12 * Math.min(4.48 / size.x, 1.82 / size.z, 1.85 / size.y);
-      if (!Number.isFinite(scale) || scale <= 0) throw new Error('Dimensiones del modelo inválidas');
-      fitted.scale.setScalar(scale);
-      fitted.updateMatrixWorld(true);
-      const finalBounds = new THREE.Box3().setFromObject(fitted);
-      const finalCenter = finalBounds.getCenter(new THREE.Vector3());
-      fitted.position.set(-finalCenter.x, -0.65 - finalBounds.min.y, -finalCenter.z);
-      this.mesh.add(fitted);
-      this.fallbackModel.visible = false;
-      this.importedModel = fitted;
-    } catch (error) {
-      console.warn('No se pudo cargar el modelo 3D del auto; se usa el anterior.', error);
-      this.importedWheels = [];
-      this.importedModel?.removeFromParent();
-      this.importedModel = null;
-      this.fallbackModel.visible = true;
-    }
-  }
-
   private buildModel(): THREE.Group {
     const g = new THREE.Group();
-    const paint = paintedMaterial({ color: 0xbca36b, brushScale: 1.4, brushAmount: 0.16, rim: 0.25 });
-    const lightPaint = paintedMaterial({ color: 0xc9b27a, brushScale: 1.4, brushAmount: 0.12, rim: 0.3 });
-    const shade = paintedMaterial({ color: 0x937b4d, brushScale: 1.5, brushAmount: 0.13 });
-    const chrome = paintedMaterial({ color: 0xc2c1b4, brushScale: 2, brushAmount: 0.06, rim: 0.42 });
-    const trim = paintedMaterial({ color: 0x3a3831, brushScale: 2, brushAmount: 0.05 });
-    const glass = paintedMaterial({ color: 0x415865, brushScale: 2.2, brushAmount: 0.07, rim: 0.65, side: THREE.DoubleSide });
-    const windshield = paintedMaterial({ color: 0x566978, brushScale: 2, brushAmount: 0.05, rim: 0.75, side: THREE.DoubleSide });
-    const tire = paintedMaterial({ color: 0x272720, brushScale: 3, brushAmount: 0.08 });
-    const red = paintedMaterial({ color: 0xa83725, emissive: 0x250600, brushAmount: 0.06 });
-    const amber = paintedMaterial({ color: 0xc08035, emissive: 0x281000, brushAmount: 0.06 });
-    const white = paintedMaterial({ color: 0xe6d9bb, emissive: 0x201b0f, brushAmount: 0.04 });
+    const paint = paintedMaterial({ color: 0xeee2bd, brushScale: 1.6, brushAmount: 0.12, rim: 0.35 });
+    const chrome = paintedMaterial({ color: 0xd8d8d0, brushScale: 2, brushAmount: 0.1, rim: 0.4 });
+    const glass = paintedMaterial({ color: 0x3a4f5c, brushScale: 2, brushAmount: 0.08, rim: 0.6 });
+    const dark = paintedMaterial({ color: 0x2a2a2a, brushScale: 2, brushAmount: 0.1 });
+    const tire = paintedMaterial({ color: 0x222020, brushScale: 3, brushAmount: 0.1 });
+    const red = paintedMaterial({ color: 0xb02a20 });
+    const yellow = paintedMaterial({ color: 0xffe9a8, emissive: 0x332a10 });
     const box = (w: number, h: number, d: number, m: THREE.Material, x: number, y: number, z: number) => {
       const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
       mesh.position.set(x, y, z);
@@ -212,92 +108,44 @@ export class Vehicle {
       g.add(mesh);
       return mesh;
     };
-    const panel = (points: number[][], material: THREE.Material) => {
-      const geo = new THREE.BufferGeometry();
-      geo.setAttribute('position', new THREE.Float32BufferAttribute(points.flat(), 3));
-      geo.setIndex([0, 1, 2, 0, 2, 3]);
-      geo.computeVertexNormals();
-      const mesh = new THREE.Mesh(geo, material);
-      mesh.castShadow = false;
-      g.add(mesh);
-    };
-
-    // Silueta de sedán de cuatro puertas: trompa y baúl rectos, techo bajo.
-    box(4.55, 0.62, 1.78, paint, 0, 0.25, 0);
-    box(1.22, 0.13, 1.78, lightPaint, 1.66, 0.62, 0); // capot
-    box(0.66, 0.11, 1.78, lightPaint, -1.94, 0.61, 0); // tapa del baúl
-    box(2.77, 0.14, 1.66, lightPaint, -0.22, 0.70, 0); // línea de cintura
-    // Parantes y techo forman un trapecio ancho, como en la foto.
-    const cabinSide = new THREE.Shape();
-    cabinSide.moveTo(-1.68, 0.73);
-    cabinSide.lineTo(1.10, 0.73);
-    cabinSide.lineTo(0.55, 1.43);
-    cabinSide.lineTo(-1.18, 1.43);
-    cabinSide.closePath();
-    const cabinGeo = new THREE.ExtrudeGeometry(cabinSide, { depth: 1.49, bevelEnabled: false });
-    cabinGeo.translate(0, 0, -0.745);
-    const cabin = new THREE.Mesh(cabinGeo, paint);
-    cabin.castShadow = cabin.receiveShadow = true;
+    // carrocería de tres volúmenes
+    box(4.5, 0.62, 1.74, paint, 0, 0.28, 0);
+    box(4.42, 0.12, 1.66, paint, 0.02, 0.64, 0);
+    // cabina
+    const cab = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, 4, 1), paint);
+    cab.rotation.y = Math.PI / 4;
+    cab.scale.set(1.55, 0.58, 1.12);
+    const cabGeo = new THREE.BoxGeometry(2.1, 0.62, 1.52);
+    const cp = cabGeo.attributes.position;
+    for (let i = 0; i < cp.count; i++) if (cp.getY(i) > 0) cp.setX(i, cp.getX(i) * 0.78 - 0.08);
+    cabGeo.computeVertexNormals();
+    const cabin = new THREE.Mesh(cabGeo, paint);
+    cabin.position.set(-0.25, 0.99, 0);
+    cabin.castShadow = true;
     g.add(cabin);
-    box(1.85, 0.075, 1.57, lightPaint, -0.32, 1.44, 0);
-
-    // Cada paño de vidrio queda separado por el parante central. Los marcos
-    // pintados y la moldura cromada hacen legible el modelo desde lejos.
-    for (const side of [-1, 1]) {
-      const z = side * 0.758;
-      panel([[-1.47, 0.82, z], [-0.40, 0.82, z], [-0.40, 1.33, z], [-1.10, 1.33, z]], glass);
-      panel([[-0.31, 0.82, z], [0.90, 0.82, z], [0.48, 1.33, z], [-0.31, 1.33, z]], glass);
-      box(0.046, 0.55, 0.052, trim, -0.35, 1.08, z + side * 0.014);
-      box(2.48, 0.025, 0.05, chrome, -0.25, 0.795, z + side * 0.014);
-      box(1.70, 0.025, 0.05, chrome, -0.32, 1.425, z + side * 0.014);
-      box(0.045, 0.08, 0.20, chrome, -0.11, 0.63, side * 0.89); // picaportes
-      box(0.045, 0.08, 0.20, chrome, -1.10, 0.63, side * 0.89);
-      box(4.23, 0.032, 0.045, shade, 0, 0.46, side * 0.907); // nervio lateral
-      box(0.38, 0.12, 0.17, paint, 0.91, 0.83, side * 0.92); // espejos
-      box(0.13, 0.26, 0.05, trim, 0.81, 0.86, side * 0.94);
-      // Hendiduras verticales de las cuatro puertas.
-      box(0.016, 0.54, 0.036, shade, -0.34, 0.42, side * 0.914);
-      box(0.016, 0.54, 0.036, shade, -1.50, 0.42, side * 0.914);
+    // vidrios
+    const winGeo = cabGeo.clone();
+    winGeo.scale(1.01, 0.72, 1.01);
+    const win = new THREE.Mesh(winGeo, glass);
+    win.position.set(-0.25, 0.99, 0);
+    g.add(win);
+    box(2.0, 0.06, 1.42, paint, -0.25, 1.31, 0); // techo
+    // paragolpes, parrilla, faros
+    box(0.16, 0.18, 1.8, chrome, 2.3, 0.15, 0);
+    box(0.16, 0.18, 1.8, chrome, -2.3, 0.15, 0);
+    box(0.06, 0.28, 1.1, dark, 2.27, 0.42, 0);
+    for (const z of [0.66, -0.66]) {
+      const head = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.08, 12), yellow);
+      head.rotation.z = Math.PI / 2;
+      head.position.set(2.27, 0.42, z);
+      g.add(head);
+      box(0.06, 0.16, 0.34, red, -2.27, 0.44, z * 0.95);
     }
-    panel([[1.102, 0.82, -0.725], [1.102, 0.82, 0.725], [0.555, 1.34, 0.725], [0.555, 1.34, -0.725]], windshield);
-    panel([[-1.685, 0.82, 0.725], [-1.685, 0.82, -0.725], [-1.175, 1.34, -0.725], [-1.175, 1.34, 0.725]], windshield);
-    for (const side of [-1, 1]) {
-      box(0.016, 0.45, 0.018, chrome, 0.84, 1.08, side * 0.72);
-      box(0.016, 0.45, 0.018, chrome, -1.43, 1.08, side * 0.72);
-    }
-
-    // Parrilla horizontal y faros cuadrados; atrás, ópticas de dos colores.
-    box(0.08, 0.34, 1.13, trim, 2.29, 0.43, 0);
-    for (const y of [0.32, 0.40, 0.48, 0.56]) box(0.092, 0.019, 1.06, chrome, 2.345, y, 0);
-    for (const side of [-1, 1]) {
-      box(0.095, 0.31, 0.45, white, 2.30, 0.47, side * 0.68);
-      box(0.10, 0.25, 0.45, red, -2.30, 0.50, side * 0.67);
-      box(0.105, 0.115, 0.45, amber, -2.31, 0.31, side * 0.67);
-      box(0.11, 0.025, 0.47, chrome, -2.32, 0.44, side * 0.67);
-      box(0.13, 0.16, 0.12, trim, 2.34, 0.18, side * 0.62); // tacos de paragolpes
-      box(0.13, 0.16, 0.12, trim, -2.34, 0.18, side * 0.62);
-    }
-    box(0.17, 0.17, 1.86, chrome, 2.35, 0.17, 0);
-    box(0.17, 0.17, 1.86, chrome, -2.35, 0.17, 0);
-    box(0.022, 0.11, 0.30, chrome, -2.30, 0.66, 0); // insignia del baúl
-    const plateCanvas = document.createElement('canvas');
-    plateCanvas.width = 256; plateCanvas.height = 72;
-    const plateCtx = plateCanvas.getContext('2d')!;
-    plateCtx.fillStyle = '#2b2b26'; plateCtx.fillRect(0, 0, 256, 72);
-    plateCtx.strokeStyle = '#c9c6bd'; plateCtx.lineWidth = 4; plateCtx.strokeRect(3, 3, 250, 66);
-    plateCtx.fillStyle = '#e1dfdb'; plateCtx.textAlign = 'center'; plateCtx.textBaseline = 'middle';
-    plateCtx.font = 'bold 45px sans-serif'; plateCtx.fillText('VGB 1985', 128, 37);
-    const plateTexture = new THREE.CanvasTexture(plateCanvas);
-    plateTexture.colorSpace = THREE.SRGBColorSpace;
-    const plate = new THREE.Mesh(new THREE.PlaneGeometry(0.71, 0.20), new THREE.MeshBasicMaterial({ map: plateTexture }));
-    plate.rotation.y = -Math.PI / 2;
-    plate.position.set(-2.305, 0.47, 0);
-    g.add(plate);
-
-    // Ruedas de chapa con centro claro, banda oscura y seis ranuras.
+    box(0.03, 0.03, 1.76, chrome, 0, 0.42, 0); // moldura lateral (se ve como línea)
+    // ruedas
     const wheelGeo = new THREE.CylinderGeometry(0.36, 0.36, 0.26, 16);
     wheelGeo.rotateX(Math.PI / 2);
-    const hubGeo = new THREE.CylinderGeometry(0.215, 0.215, 0.285, 16);
+    const hubGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.28, 10);
     hubGeo.rotateX(Math.PI / 2);
     for (let i = 0; i < 4; i++) {
       const wg = new THREE.Group();
@@ -305,17 +153,9 @@ export class Vehicle {
       t.castShadow = true;
       wg.add(t);
       wg.add(new THREE.Mesh(hubGeo, chrome));
-      for (let spoke = 0; spoke < 6; spoke++) {
-        const a = spoke * Math.PI / 3;
-        const spot = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.023, 0.296), trim);
-        spot.position.set(Math.cos(a) * 0.14, Math.sin(a) * 0.14, 0);
-        spot.rotation.z = a;
-        wg.add(spot);
-      }
       g.add(wg);
       this.wheels.push(wg);
     }
-    g.name = 'Sedán beige de Villa General Belgrano';
     return g;
   }
 
@@ -429,17 +269,6 @@ export class Vehicle {
   render(alpha: number): void {
     this.mesh.position.lerpVectors(this.prevPos, this.currPos, alpha);
     this.mesh.quaternion.slerpQuaternions(this.prevRot, this.currRot, alpha);
-    const p = this.mesh.position;
-    const ray = new RAPIER.Ray({ x: p.x, y: p.y + 2, z: p.z }, { x: 0, y: -1, z: 0 });
-    const hit = this.physics.world.castRay(ray, 8, true, RAPIER.QueryFilterFlags.EXCLUDE_DYNAMIC | RAPIER.QueryFilterFlags.EXCLUDE_KINEMATIC);
-    const groundY = hit ? ray.origin.y - hit.timeOfImpact : this.w.heightAtXZ(p.x, p.z);
-    const road = this.w.surfaceAt(p.x, -p.z).road;
-    const roadY = this.w.heightAtXZ(p.x, p.z) + (road ? (road.major ? 0.1 : 0.06) + (road.bridge ? 0.35 : 0) : 0);
-    const visibleGroundY = Math.max(groundY, roadY);
-    const forward = new THREE.Vector3(1, 0, 0).applyQuaternion(this.mesh.quaternion);
-    this.contactShadow.position.set(p.x, visibleGroundY + 0.025, p.z);
-    this.contactShadow.rotation.y = Math.atan2(-forward.z, forward.x);
-    this.contactShadow.material.uniforms.opacity.value = 0.34 * THREE.MathUtils.clamp(1 - Math.max(0, p.y - visibleGroundY - 0.8) / 2, 0, 1);
     for (let i = 0; i < 4; i++) {
       const cp = this.controller.wheelChassisConnectionPointCs(i)!;
       const susp = this.controller.wheelSuspensionLength(i) ?? SEDAN.suspensionRest;
@@ -449,16 +278,6 @@ export class Vehicle {
       const st = this.controller.wheelSteering(i) ?? 0;
       wg.rotation.set(0, st, 0);
       wg.children.forEach((ch) => (ch.rotation.z = -rotA));
-    }
-    if (this.importedWheels.length) {
-      // El eje de giro del archivo queda alineado con Z tras ajustar el modelo.
-      for (const { pivot, index, original } of this.importedWheels) {
-        const roll = this.controller.wheelRotation(index) ?? 0;
-        const steer = index < 2 ? this.controller.wheelSteering(index) ?? 0 : 0;
-        pivot.quaternion.copy(original)
-          .multiply(new THREE.Quaternion().setFromAxisAngle(this.importedUpAxis, steer))
-          .multiply(new THREE.Quaternion().setFromAxisAngle(this.importedWheelAxis, -roll));
-      }
     }
   }
 

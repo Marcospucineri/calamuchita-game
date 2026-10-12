@@ -16,7 +16,7 @@ export class CameraRig {
   private pos = new THREE.Vector3();
   private look = new THREE.Vector3();
   private first = true;
-  private mode: 'driving' | 'onfoot' | 'flying' = 'driving';
+  private mode: 'driving' | 'onfoot' = 'driving';
   private zoomDrive = 1;
   private zoomFoot = 1;
   private viewDrive = 0; // 0: elevada, 1: baja/cercana
@@ -26,7 +26,7 @@ export class CameraRig {
 
   constructor(private cam: THREE.PerspectiveCamera, private w: WorldData) {}
 
-  setMode(m: 'driving' | 'onfoot' | 'flying'): void {
+  setMode(m: 'driving' | 'onfoot'): void {
     this.mode = m;
     if (m === 'onfoot') this.pitch = 0.32;
   }
@@ -37,8 +37,7 @@ export class CameraRig {
 
   update(dt: number, target: THREE.Vector3, targetForward: THREE.Vector3, speed: number, input: InputState): void {
     const k = 1 - Math.exp(-dt * 6);
-    if (this.mode === 'driving' || this.mode === 'flying') {
-      const flying = this.mode === 'flying';
+    if (this.mode === 'driving') {
       this.zoomDrive = THREE.MathUtils.clamp(this.zoomDrive + input.zoom * 0.08, 0.6, 1.8);
       // el usuario puede mirar alrededor; vuelve solo al rato
       if (input.lookX !== 0) { this.orbitOffset -= input.lookX * 0.005; this.orbitTimer = 1.5; }
@@ -50,9 +49,9 @@ export class CameraRig {
       d = Math.atan2(Math.sin(d), Math.cos(d));
       this.yaw += d * (1 - Math.exp(-dt * (2.2 + Math.min(Math.abs(speed), 25) * 0.08)));
       const high = this.viewDrive === 0;
-      this.dist = (flying ? (high ? 27 : 17) : (high ? 13.5 : 8.5)) * this.zoomDrive + Math.min(Math.abs(speed), 60) * 0.06;
-      this.height = (flying ? (high ? 10 : 4) : (high ? 7.2 : 3.0)) * this.zoomDrive;
-      const lookAhead = flying ? 14 : Math.min(Math.abs(speed), 30) * 0.12 + 2.5;
+      this.dist = (high ? 13.5 : 8.5) * this.zoomDrive + Math.min(Math.abs(speed), 40) * 0.06;
+      this.height = (high ? 7.2 : 3.0) * this.zoomDrive;
+      const lookAhead = Math.min(Math.abs(speed), 30) * 0.12 + 2.5;
       const desired = new THREE.Vector3(Math.sin(this.yaw) * this.dist, this.height, Math.cos(this.yaw) * this.dist).add(target);
       const lookAt = new THREE.Vector3(-Math.sin(this.yaw) * lookAhead, 1.2, -Math.cos(this.yaw) * lookAhead).add(target);
       this.pivot.copy(target).add(new THREE.Vector3(0, 2.2, 0));
@@ -84,7 +83,7 @@ export class CameraRig {
     // nunca debajo del terreno
     const g = this.w.heightAtXZ(desired.x, desired.z) + 1.2;
     if (desired.y < g) desired.y = g;
-    if (this.first || this.pos.distanceToSquared(desired) > 150 * 150) { this.pos.copy(desired); this.look.copy(lookAt); this.first = false; }
+    if (this.first) { this.pos.copy(desired); this.look.copy(lookAt); this.first = false; }
     this.pos.lerp(desired, k);
     this.look.lerp(lookAt, Math.min(1, k * 1.6));
     const g2 = this.w.heightAtXZ(this.pos.x, this.pos.z) + 1.0;

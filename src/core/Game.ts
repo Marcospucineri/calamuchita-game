@@ -9,8 +9,7 @@ import { POIs } from '../gameplay/POI';
 import { SaveData, SaveSystem } from '../gameplay/SaveSystem';
 import { CameraRig } from '../player/CameraRig';
 import { Character } from '../player/Character';
-import { PlayerController, VehicleChoice } from '../player/PlayerController';
-import { Aircraft } from '../player/Aircraft';
+import { PlayerController } from '../player/PlayerController';
 import { Vehicle } from '../player/Vehicle';
 import { VehicleAudio } from '../player/VehicleAudio';
 import { sharedUniforms } from '../render/PaintedMaterial';
@@ -22,7 +21,6 @@ import { Sky } from '../world/Sky';
 import { Terrain } from '../world/Terrain';
 import { Vegetation } from '../world/Vegetation';
 import { WorldData } from '../world/WorldData';
-import { Airfield, getAirfield, prepareAirfield } from '../world/Airfield';
 
 export class Game {
   readonly renderer: Renderer;
@@ -42,8 +40,7 @@ export class Game {
   private saveTimer = 0;
   private miniZoom = 1;
 
-  constructor(readonly world: WorldData, canvas: HTMLCanvasElement, uiRoot: HTMLElement, quality: QualityLevel, save: SaveData | null, vehicle: VehicleChoice = save?.vehicle ?? 'car') {
-    prepareAirfield(world);
+  constructor(readonly world: WorldData, canvas: HTMLCanvasElement, uiRoot: HTMLElement, quality: QualityLevel, save: SaveData | null) {
     const q = QUALITY[quality];
     const tStart = performance.now();
     let tLast = tStart;
@@ -59,7 +56,6 @@ export class Game {
     lap('roads');
     const buildings = new Buildings(world, scene);
     const landmarks = new Landmarks(world, scene);
-    const airfield = new Airfield(world, scene);
     lap('buildings');
     this.vegetation = new Vegetation(world, scene, q.treeNearRadius, q.treeFarRadius, q.shadows);
     lap('vegetation');
@@ -67,7 +63,6 @@ export class Game {
     this.physics = new Physics(world);
     this.physics.addBoxes(buildings.colliders);
     this.physics.addBoxes(landmarks.colliders);
-    this.physics.addBoxes(airfield.colliders);
     for (const b of roads.bridgeColliders) this.physics.addTrimesh(b.vertices, b.indices);
     lap('physics');
 
@@ -76,8 +71,7 @@ export class Game {
     const carX = save?.car.x ?? st.x, carN = save?.car.n ?? st.n, carH = save?.car.heading ?? st.heading;
     const car = new Vehicle(this.physics, world, scene, new THREE.Vector3(carX, world.heightAt(carX, carN) + 1, -carN), carH);
     const person = new Character(this.physics, scene);
-    const plane = new Aircraft(world, scene, this.physics, getAirfield(world).spawn);
-    this.player = new PlayerController(car, person, this.physics, world, plane);
+    this.player = new PlayerController(car, person, this.physics, world);
     this.cameraRig = new CameraRig(this.renderer.camera, world);
     // solo obstáculos fijos (casas, árboles, puentes); el terreno ya lo maneja la cámara
     this.cameraRig.occluder = (from, to) => {
@@ -89,12 +83,7 @@ export class Game {
       return hit ? hit.timeOfImpact : null;
     };
     this.cameraRig.yaw = Math.atan2(-Math.cos(carH), Math.sin(carH));
-    if (vehicle === 'plane') {
-      this.player.selectVehicle('plane');
-      this.cameraRig.setMode('flying');
-      const f = plane.forward();
-      this.cameraRig.yaw = Math.atan2(-f.x, -f.z);
-    } else if (save?.mode === 'onfoot') {
+    if (save?.mode === 'onfoot') {
       car.occupied = false;
       person.spawn(new THREE.Vector3(save.player.x, world.heightAt(save.player.x, save.player.n), -save.player.n), 0);
       this.player.mode = 'onfoot';
@@ -108,11 +97,8 @@ export class Game {
     this.pois = new POIs(world, scene, save?.discovered ?? []);
     lap('pois');
     this.hud.setFound(this.pois.discovered.size);
-    this.hud.setVehicle(vehicle);
 
     this.hud.onTravel = (x, n, label) => this.fastTravel(x, n, label);
-    this.hud.onVehicleChange = (choice) => this.selectVehicle(choice);
-    this.hud.onReturnToAirfield = () => this.returnToAirfield();
     this.hud.onClose = () => { const p = this.player.position; this.hud.toggleMap(p.x, -p.z, this.pois.discovered); };
 
     bus.on('player:mode', (e) => {
@@ -132,11 +118,7 @@ export class Game {
   /** Compila los shaders sin trabar la página (antes del primer cuadro). */
   async warmup(): Promise<void> {
     const r = this.renderer;
-    const p = this.player;
-    await p.car.loadModel(`${import.meta.env.BASE_URL}models/fiat-uno-5-door.glb`);
-    p.car.render(1);
-    p.plane.render(1, 0);
-    this.cameraRig.update(1 / 60, p.position, p.flying ? p.plane.forward() : p.car.forward(), 0, this.input.read());
+    this.cameraRig.update(1 / 60, this.player.car.mesh.position, this.player.car.forward(), 0, this.input.read());
     try {
       await r.renderer.compileAsync(r.scene, r.camera);
     } catch {
@@ -147,9 +129,7 @@ export class Game {
   start(): void {
     this.audio.start();
     this.loop.start();
-    bus.emit('toast', this.player.flying
-      ? { text: 'Aeroclub de Villa General Belgrano', sub: 'Acelerá para despegar · Espacio para subir · Shift para bajar' }
-      : { text: 'Bienvenido al Valle de Calamuchita', sub: 'Buscá las postales ✉ en los tres pueblos' });
+    bus.emit('toast', { text: 'Bienvenido al Valle de Calamuchita', sub: 'Buscá las postales ✉ en los tres pueblos' });
   }
 
   private fixed(dt: number): void {
@@ -171,37 +151,31 @@ export class Game {
     if (!this.hud.isMapOpen) p.handleActions(this.state);
 
     p.car.render(alpha);
-    p.plane.render(alpha, this.hud.isMapOpen ? 0 : dt);
     p.person.render(alpha, dt);
     const driving = p.driving;
-    const flying = p.flying;
-    const target = flying ? p.plane.mesh.position : driving ? p.car.mesh.position : p.person.mesh.position;
-    const forward = flying ? p.plane.forward() : p.car.forward();
-    const speed = flying ? p.plane.speed : driving ? p.car.speed : 0;
-    this.cameraRig.update(dt, target, forward, speed, this.state);
+    const target = driving ? p.car.mesh.position : p.person.mesh.position;
+    this.cameraRig.update(dt, target, p.car.forward(), driving ? p.car.speed : 0, this.state);
 
     this.terrain.update(this.renderer.camera.position);
     this.vegetation.update(target);
     this.physics.updateTrees(this.vegetation, target.x, -target.z);
     this.renderer.followShadow(target);
     this.sky.update(this.renderer.camera.position, this.time);
-    this.pois.update(dt, target.x, -target.z, driving || flying, flying ? target.y : undefined);
+    this.pois.update(dt, target.x, -target.z, driving);
 
     // HUD
-    const heading = driving || flying ? Math.atan2(-forward.z, forward.x) : Math.atan2(Math.cos(this.cameraRig.yaw), -Math.sin(this.cameraRig.yaw)) ;
-    this.hud.update(target.x, -target.z, driving || flying ? speed * 3.6 : null, driving ? p.car.surface : null);
-    if (flying) this.hud.setFlight(p.plane.altitude, p.plane.grounded);
-    const cam = driving || flying ? null : p.car.position;
-    this.miniZoom += ((flying ? 0.4 : driving ? THREE.MathUtils.lerp(1, 0.55, Math.min(1, Math.abs(speed) / 30)) : 1.6) - this.miniZoom) * Math.min(1, dt * 2);
+    const heading = driving ? Math.atan2(-p.car.forward().z, p.car.forward().x) : Math.atan2(Math.cos(this.cameraRig.yaw), -Math.sin(this.cameraRig.yaw)) ;
+    this.hud.update(target.x, -target.z, driving ? p.car.speed * 3.6 : null, driving ? p.car.surface : null);
+    const cam = driving ? null : p.car.position;
+    this.miniZoom += ((driving ? THREE.MathUtils.lerp(1, 0.55, Math.min(1, Math.abs(p.car.speed) / 30)) : 1.6) - this.miniZoom) * Math.min(1, dt * 2);
     this.hud.minimap.draw(target.x, -target.z, heading, cam ? cam.x : null, cam ? -cam.z : null, this.pois.discovered, this.miniZoom);
     const action = p.canExit() ? 'Bajarse del auto' : p.canEnter() ? 'Subir al auto' : null;
     if (this.input.touch) {
       this.input.touch.setAction(action ? (p.canExit() ? 'Bajar' : 'Subir') : null);
       this.input.touch.setDriving(driving);
-      this.input.touch.setFlying(flying);
       this.hud.setPrompt(null);
     } else this.hud.setPrompt(action ? `<kbd>E</kbd> ${action}` : null);
-    this.audio.update(driving || flying, speed, flying ? p.plane.throttleOut : p.car.throttleOut, flying ? 0 : p.car.rough, flying);
+    this.audio.update(driving, p.car.speed, p.car.throttleOut, p.car.rough);
 
     this.saveTimer += dt;
     if (this.saveTimer > 5) { this.saveTimer = 0; this.save(); }
@@ -213,8 +187,7 @@ export class Game {
     const f = p.car.forward();
     SaveSystem.save({
       version: 1,
-      mode: p.flying ? 'flying' : p.driving ? 'driving' : 'onfoot',
-      vehicle: p.vehicle,
+      mode: p.driving ? 'driving' : 'onfoot',
       car: { x: p.car.position.x, n: -p.car.position.z, heading: Math.atan2(-f.z, f.x) },
       player: { x: p.person.position.x, n: -p.person.position.z },
       discovered: [...this.pois.discovered],
@@ -223,10 +196,6 @@ export class Game {
 
   /** Viaje rápido: aparece en la calle más cercana al punto elegido en el mapa, ya arriba del auto. */
   fastTravel(x: number, n: number, label: string): void {
-    if (this.player.flying) {
-      bus.emit('toast', { text: 'Explorá el valle volando', sub: 'Para viajar por tierra, elegí Auto. La avioneta sale desde el aeroclub.' });
-      return;
-    }
     let best: { px: number; pn: number; dirX: number; dirN: number; dist: number } | null = null;
     for (let r = 0; r <= 400 && !best; r += 40) {
       for (let a = 0; a < (r ? 16 : 1); a++) {
@@ -251,35 +220,6 @@ export class Game {
     this.terrain.update(p.car.position);
     if (this.hud.isMapOpen) this.hud.toggleMap(0, 0, this.pois.discovered);
     bus.emit('toast', { text: `Viajaste a ${label}`, sub: 'Viaje rápido' });
-    this.save();
-  }
-
-  selectVehicle(vehicle: VehicleChoice): void {
-    if (vehicle === this.player.vehicle) return;
-    this.player.selectVehicle(vehicle);
-    this.hud.setVehicle(vehicle);
-    const forward = vehicle === 'plane' ? this.player.plane.forward() : this.player.car.forward();
-    this.cameraRig.yaw = Math.atan2(-forward.x, -forward.z);
-    this.cameraRig.snap();
-    this.vegetation.update(this.player.position, true);
-    this.terrain.update(this.player.position);
-    if (this.hud.isMapOpen) this.hud.toggleMap(0, 0, this.pois.discovered);
-    bus.emit('toast', vehicle === 'plane'
-      ? { text: 'Avioneta lista en el aeroclub', sub: 'Acelerá para despegar. Podés volver al auto cuando quieras.' }
-      : { text: 'De vuelta en el auto', sub: 'Seguís desde donde lo dejaste.' });
-    this.save();
-  }
-
-  returnToAirfield(): void {
-    if (!this.player.flying) return;
-    this.player.plane.reset();
-    const f = this.player.plane.forward();
-    this.cameraRig.yaw = Math.atan2(-f.x, -f.z);
-    this.cameraRig.snap();
-    this.vegetation.update(this.player.position, true);
-    this.terrain.update(this.player.position);
-    if (this.hud.isMapOpen) this.hud.toggleMap(0, 0, this.pois.discovered);
-    bus.emit('toast', { text: 'De vuelta en el aeroclub', sub: 'La pista está lista para otro vuelo.' });
     this.save();
   }
 
