@@ -40,36 +40,95 @@ export class Character {
   }
 
   private buildModel(): void {
-    const shirt = paintedMaterial({ color: 0xc7643a, brushScale: 3, rim: 0.3 });
-    const pants = paintedMaterial({ color: 0x3d4f6b, brushScale: 3 });
-    const skin = paintedMaterial({ color: 0xe0b48e, brushScale: 3 });
-    const hair = paintedMaterial({ color: 0x3a2618, brushScale: 3 });
-    const shoe = paintedMaterial({ color: 0x3a2a20, brushScale: 3 });
+    const tee = paintedMaterial({ color: 0x191e1c, brushScale: 3, brushAmount: 0.12, rim: 0.24 });
+    const rib = paintedMaterial({ color: 0x101513, brushScale: 3, brushAmount: 0.08 });
+    const shorts = paintedMaterial({ color: 0xd7c597, brushScale: 2.5, brushAmount: 0.15 });
+    const shortsShade = paintedMaterial({ color: 0xb9aa83, brushScale: 2.5, brushAmount: 0.12 });
+    const skin = paintedMaterial({ color: 0xc79061, brushScale: 3.5, brushAmount: 0.13, rim: 0.25 });
+    const skinShade = paintedMaterial({ color: 0xa86f4b, brushScale: 3.5, brushAmount: 0.1 });
+    const beard = paintedMaterial({ color: 0x392a1f, brushScale: 4, brushAmount: 0.12 });
+    const shoe = paintedMaterial({ color: 0x252927, brushScale: 3, brushAmount: 0.11 });
+    const sole = paintedMaterial({ color: 0xb7b5a0, brushScale: 2, brushAmount: 0.05 });
+    const lace = paintedMaterial({ color: 0xdfd8b9, brushScale: 2, brushAmount: 0.05 });
     const add = (geo: THREE.BufferGeometry, m: THREE.Material, x: number, y: number, z: number, parent: THREE.Object3D = this.mesh) => {
       const mesh = new THREE.Mesh(geo, m);
       mesh.position.set(x, y, z);
       mesh.castShadow = true;
+      mesh.receiveShadow = true;
       parent.add(mesh);
       return mesh;
     };
-    add(new THREE.CapsuleGeometry(0.27, 0.45, 4, 10), shirt, 0, 1.12, 0);
-    add(new THREE.SphereGeometry(0.21, 12, 10), skin, 0, 1.67, 0);
-    const h = add(new THREE.SphereGeometry(0.22, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.55), hair, 0, 1.7, -0.01);
-    h.rotation.x = -0.15;
+    const box = (w: number, h: number, d: number, m: THREE.Material, x: number, y: number, z: number, parent: THREE.Object3D = this.mesh) =>
+      add(new THREE.BoxGeometry(w, h, d), m, x, y, z, parent);
+    const shirtGeometry = () => {
+      // Seis secciones ovaladas: cintura angosta, pecho suave y hombros redondeados.
+      const rings = [
+        [0.91, 0.17, 0.205], [0.97, 0.19, 0.225],
+        [1.22, 0.218, 0.263], [1.39, 0.198, 0.257],
+        [1.48, 0.145, 0.19], [1.52, 0.08, 0.11],
+      ];
+      const sides = 16, positions: number[] = [], indices: number[] = [];
+      for (const [y, depth, halfWidth] of rings) {
+        for (let i = 0; i < sides; i++) {
+          const a = i * Math.PI * 2 / sides;
+          positions.push(Math.cos(a) * depth, y, Math.sin(a) * halfWidth);
+        }
+      }
+      for (let r = 0; r < rings.length - 1; r++) for (let i = 0; i < sides; i++) {
+        const a = r * sides + i, b = r * sides + (i + 1) % sides;
+        const c = (r + 1) * sides + (i + 1) % sides, d = (r + 1) * sides + i;
+        indices.push(a, c, b, a, d, c);
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geo.setIndex(indices);
+      geo.computeVertexNormals();
+      return geo;
+    };
+
+    // Marcos: cabeza rapada, barba corta y remera negra. El frente
+    // del modelo mira hacia +X, como el movimiento del personaje existente.
+    box(0.30, 0.13, 0.33, shorts, 0, 0.83, 0);
+    add(shirtGeometry(), tee, 0, 0, 0);
+    add(new THREE.CylinderGeometry(0.188, 0.185, 0.025, 12), rib, 0, 0.925, 0); // ruedo
+    const collar = add(new THREE.TorusGeometry(0.108, 0.022, 6, 16), rib, 0, 1.512, 0);
+    collar.rotation.x = Math.PI / 2;
+    box(0.16, 0.13, 0.16, skin, 0, 1.56, 0); // cuello
+
+    add(new THREE.SphereGeometry(0.205, 16, 12), skin, 0.025, 1.72, 0);
+    add(new THREE.SphereGeometry(0.14, 12, 8), beard, 0.126, 1.61, 0).scale.set(0.64, 0.86, 1.18);
+    box(0.052, 0.037, 0.19, beard, 0.231, 1.665, 0); // bigote
+    add(new THREE.SphereGeometry(0.040, 8, 6), skinShade, 0.237, 1.714, 0).scale.set(1, 1.4, 0.80); // nariz
+    for (const s of [-1, 1]) {
+      add(new THREE.SphereGeometry(0.045, 8, 6), skin, 0.035, 1.704, s * 0.203); // orejas
+      add(new THREE.SphereGeometry(0.013, 8, 6), beard, 0.204, 1.748, s * 0.077); // ojos
+      box(0.022, 0.018, 0.078, beard, 0.202, 1.791, s * 0.078); // cejas
+      add(new THREE.SphereGeometry(0.07, 8, 6), beard, 0.101, 1.622, s * 0.137).scale.set(0.65, 0.85, 0.8);
+    }
+
     for (const s of [-1, 1]) {
       const hip = new THREE.Group();
-      hip.position.set(0, 0.82, s * 0.12);
+      hip.position.set(0, 0.81, s * 0.155);
       this.mesh.add(hip);
-      add(new THREE.CapsuleGeometry(0.1, 0.5, 3, 8), pants, 0, -0.38, 0, hip);
-      add(new THREE.BoxGeometry(0.26, 0.1, 0.13), shoe, 0.06, -0.74, 0, hip);
+      add(new THREE.CylinderGeometry(0.14, 0.15, 0.30, 10), shorts, 0, -0.105, 0, hip);
+      add(new THREE.CylinderGeometry(0.151, 0.151, 0.024, 10), shortsShade, 0, -0.25, 0, hip); // ruedo
+      add(new THREE.CapsuleGeometry(0.082, 0.25, 4, 9), skin, -0.01, -0.43, 0, hip);
+      add(new THREE.SphereGeometry(0.075, 8, 6), skinShade, 0.01, -0.35, 0, hip);
+      box(0.31, 0.055, 0.19, sole, 0.08, -0.748, 0, hip);
+      box(0.30, 0.11, 0.19, shoe, 0.065, -0.688, 0, hip);
+      for (const dx of [-0.03, 0.025, 0.08]) box(0.014, 0.011, 0.14, lace, dx, -0.625, 0, hip);
       this.legs.push(hip);
+
       const sh = new THREE.Group();
-      sh.position.set(0, 1.38, s * 0.33);
+      sh.position.set(0, 1.42, s * 0.292);
       this.mesh.add(sh);
-      add(new THREE.CapsuleGeometry(0.075, 0.45, 3, 8), shirt, 0, -0.28, 0, sh);
-      add(new THREE.SphereGeometry(0.075, 8, 6), skin, 0, -0.58, 0, sh);
+      add(new THREE.CapsuleGeometry(0.090, 0.10, 4, 10), tee, 0, -0.115, 0, sh); // manga corta
+      add(new THREE.CylinderGeometry(0.091, 0.088, 0.024, 10), rib, 0, -0.24, 0, sh);
+      add(new THREE.CapsuleGeometry(0.073, 0.255, 4, 10), skin, 0, -0.405, 0, sh);
+      add(new THREE.SphereGeometry(0.057, 8, 6), skin, 0.025, -0.575, 0, sh);
       this.arms.push(sh);
     }
+    this.mesh.name = 'Marcos caminando';
   }
 
   get position(): THREE.Vector3 {

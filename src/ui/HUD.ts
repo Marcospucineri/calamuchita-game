@@ -76,6 +76,10 @@ export class HUD {
     this.root.addEventListener('keydown', (e) => {
       if (e.target instanceof HTMLButtonElement && (e.code === 'Space' || e.code === 'Enter')) e.stopPropagation();
     });
+    this.root.addEventListener('click', (e) => {
+      // Un botón pulsado con el mouse no debe quedarse con Espacio y bloquear el ascenso.
+      if (e.detail > 0 && e.target instanceof HTMLButtonElement) e.target.blur();
+    });
     const q = <T extends HTMLElement>(s: string) => this.root.querySelector(s) as T;
     this.place = q('.place-name');
     this.placeSub = q('.place-sub');

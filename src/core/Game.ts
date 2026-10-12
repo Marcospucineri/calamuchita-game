@@ -133,6 +133,7 @@ export class Game {
   async warmup(): Promise<void> {
     const r = this.renderer;
     const p = this.player;
+    await p.car.loadModel(`${import.meta.env.BASE_URL}models/fiat-uno-5-door.glb`);
     p.car.render(1);
     p.plane.render(1, 0);
     this.cameraRig.update(1 / 60, p.position, p.flying ? p.plane.forward() : p.car.forward(), 0, this.input.read());

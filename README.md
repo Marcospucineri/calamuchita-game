@@ -121,3 +121,4 @@ Correcciones a mano (por ejemplo, la ubicación exacta del portal o POIs que no 
 
 - Mapa: © colaboradores de OpenStreetMap (licencia ODbL).
 - Relieve: Terrarium elevation tiles (Mapzen / AWS Open Data; SRTM, GMTED y otros).
+- Auto 3D: [PSX Fiat Uno 5-door](https://sketchfab.com/3d-models/psx-fiat-uno-5-door-7340fb8b784b4e799f40b2bd62b9afa1) por Elite engineer, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Se conserva el archivo original en `tools/3d/` y la copia que usa el juego en `public/models/`.

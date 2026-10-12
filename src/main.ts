@@ -41,7 +41,7 @@ title.innerHTML = `
     <div class="quality">Calidad:
       <button disabled data-q="baja">Baja</button><button disabled data-q="media">Media</button><button disabled data-q="alta">Alta</button>
     </div>
-    <div class="credits">Geografía real: © colaboradores de OpenStreetMap · Relieve: Terrarium / AWS Open Data</div>
+    <div class="credits">Geografía real: © colaboradores de OpenStreetMap · Relieve: Terrarium / AWS Open Data<br>Fiat Uno 3D: <a href="https://sketchfab.com/3d-models/psx-fiat-uno-5-door-7340fb8b784b4e799f40b2bd62b9afa1" target="_blank" rel="noopener noreferrer">Elite engineer</a> · CC BY 4.0</div>
   </div>`;
 document.body.appendChild(title);
 const bar = title.querySelector('.bar i') as HTMLElement;

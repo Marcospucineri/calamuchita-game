@@ -35,7 +35,7 @@ export class Renderer {
     const s = 70;
     Object.assign(this.sun.shadow.camera, { left: -s, right: s, top: s, bottom: -s, near: 10, far: 600 });
     this.sun.shadow.bias = -0.0006;
-    this.sun.shadow.normalBias = 0.6;
+    this.sun.shadow.normalBias = 0.02;
     this.sun.shadow.radius = 3;
     this.scene.add(this.sun, this.sun.target);
 
