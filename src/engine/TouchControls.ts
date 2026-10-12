@@ -1,6 +1,8 @@
 /**
  * Controles táctiles para celular: joystick a la izquierda (dirección / caminar),
- * botones a la derecha (acelerar, frenar, acción, mapa, cámara).
+ * botones a la derecha (acelerar, frenar, acción, mapa, cámara, música).
+ * El botón de la esquina inferior derecha oculta todo lo que no sea esencial
+ * (queda la cruceta y acelerar/frenar, o saltar a pie).
  * Arrastrar sobre el resto de la pantalla mueve la cámara (lo maneja Input).
  */
 export class TouchControls {
@@ -10,8 +12,8 @@ export class TouchControls {
   gas = false;
   brake = false;
   jump = false;
-  pitchUp = false;
-  pitchDown = false;
+  /** Modo mínimo: solo los controles esenciales. */
+  minimal = false;
   private flying = false;
   private driving = true;
   private pressed = new Set<string>();
@@ -29,16 +31,19 @@ export class TouchControls {
     this.root.innerHTML = `
       <div class="stick" aria-label="Dirección"><div class="stick-knob"></div></div>
       <div class="tbtns">
-        <button class="tb tb-small" data-k="map" aria-label="Mapa">Mapa</button>
-        <button class="tb tb-small" data-k="cam" aria-label="Cambiar cámara">Cámara</button>
-        <button class="tb tb-small" data-k="music" aria-label="Cambiar música">Música</button>
-        <button class="tb tb-small tb-flight hidden" data-k="reset" aria-label="Volver al aeroclub">Aeroclub</button>
-        <button class="tb tb-flight hidden" data-k="pitchUp" aria-label="Subir la trompa">Trompa ▲</button>
-        <button class="tb tb-flight hidden" data-k="pitchDown" aria-label="Bajar la trompa">Trompa ▼</button>
+        <div class="tb-extras">
+          <button class="tb tb-small tb-flight hidden" data-k="reset" aria-label="Volver al aeroclub">Aeroclub</button>
+          <button class="tb tb-small" data-k="map" aria-label="Mapa">Mapa</button>
+          <button class="tb tb-small" data-k="cam" aria-label="Cambiar cámara">Cámara</button>
+          <button class="tb tb-small" data-k="music" aria-label="Cambiar música">Música</button>
+        </div>
         <button class="tb tb-action hidden" data-k="act">Bajar</button>
-        <button class="tb tb-brake" data-k="brake" aria-label="Frenar o marcha atrás">Freno</button>
-        <button class="tb tb-gas" data-k="gas" aria-label="Acelerar o saltar">Acelerar</button>
-      </div>`;
+        <div class="tb-pedals">
+          <button class="tb tb-brake" data-k="brake" aria-label="Frenar o marcha atrás">Freno</button>
+          <button class="tb tb-gas" data-k="gas" aria-label="Acelerar o saltar">Acelerar</button>
+        </div>
+      </div>
+      <button class="tb-toggle" aria-pressed="false" aria-label="Ocultar botones">▾ Ocultar</button>`;
     parent.appendChild(this.root);
     const stick = this.root.querySelector('.stick') as HTMLElement;
     this.knob = this.root.querySelector('.stick-knob') as HTMLElement;
@@ -79,8 +84,6 @@ export class TouchControls {
       const set = (v: boolean) => {
         if (k === 'gas') { this.gas = v; this.jump = v; }
         else if (k === 'brake') this.brake = v;
-        else if (k === 'pitchUp') this.pitchUp = v;
-        else if (k === 'pitchDown') this.pitchDown = v;
         else if (v) this.pressed.add(k);
         b.classList.toggle('down', v);
       };
@@ -101,6 +104,24 @@ export class TouchControls {
       });
       b.addEventListener('blur', () => set(false));
     }
+
+    const toggle = this.root.querySelector('.tb-toggle') as HTMLButtonElement;
+    toggle.addEventListener('click', () => this.setMinimal(!this.minimal));
+    let saved = false;
+    try { saved = localStorage.getItem('calamuchita.touchMin') === '1'; } catch { /* sin almacenamiento */ }
+    this.setMinimal(saved);
+  }
+
+  /** Oculta (o vuelve a mostrar) todo lo que no es esencial para manejar, volar o caminar. */
+  setMinimal(on: boolean): void {
+    this.minimal = on;
+    this.root.classList.toggle('minimal', on);
+    document.body.classList.toggle('touch-min', on);
+    const toggle = this.root.querySelector('.tb-toggle') as HTMLButtonElement;
+    toggle.textContent = on ? '▴ Mostrar' : '▾ Ocultar';
+    toggle.setAttribute('aria-pressed', String(on));
+    toggle.setAttribute('aria-label', on ? 'Mostrar todos los botones' : 'Ocultar botones');
+    try { localStorage.setItem('calamuchita.touchMin', on ? '1' : '0'); } catch { /* sin almacenamiento */ }
   }
 
   consume(k: string): boolean {
@@ -124,7 +145,7 @@ export class TouchControls {
   setFlying(flying: boolean): void {
     if (this.flying === flying) return;
     this.flying = flying;
-    this.gas = this.brake = this.jump = this.pitchUp = this.pitchDown = false;
+    this.gas = this.brake = this.jump = false;
     this.pressed.clear();
     this.root.querySelectorAll('.down').forEach((b) => b.classList.remove('down'));
     this.updateMode();

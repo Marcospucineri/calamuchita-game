@@ -149,9 +149,21 @@ kbd {
   background: var(--paper); border: 3px solid #e2cfa0; box-shadow: 0 3px 0 rgba(107,84,64,0.5);
 }
 .tbtns {
-  position: absolute; right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-  display: grid; grid-template-columns: auto auto; grid-template-areas: "map cam" "act act" "brake gas"; gap: 10px; align-items: end; justify-items: end;
+  position: absolute; right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(54px + env(safe-area-inset-bottom, 0px));
+  display: flex; flex-direction: column; align-items: flex-end; gap: 10px;
 }
+.tb-extras { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; max-width: 290px; }
+.tb-pedals { display: flex; align-items: flex-end; gap: 10px; }
+.tb-toggle {
+  position: absolute; right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  pointer-events: auto; touch-action: manipulation; border: none; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  min-height: 32px; padding: 5px 12px; border-radius: 16px; font: 800 12px var(--body); color: var(--ink);
+  background: rgba(246,236,210,0.78); box-shadow: 0 2px 8px rgba(40,25,10,0.2);
+}
+.tb-toggle:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+/* modo mínimo: solo cruceta y pedales (y "Bajar"/"Subir" cuando corresponde) */
+.touch-ui.minimal .tb-extras { display: none; }
+body.touch-min .postales, body.touch-min .vehicle-switch { display: none !important; }
 .tb {
   pointer-events: auto; touch-action: none; border: none; cursor: pointer; font: 800 15px var(--body); color: var(--ink);
   background: var(--paper); border-radius: 18px; box-shadow: 0 4px 0 rgba(107,84,64,0.55), 0 8px 20px rgba(40,25,10,0.2);
@@ -159,14 +171,13 @@ kbd {
 }
 .tb.down { transform: translateY(3px); box-shadow: 0 1px 0 rgba(107,84,64,0.55); }
 .tb-small { padding: 8px 12px; font-size: 13px; border-radius: 12px; }
-.tb[data-k="map"] { grid-area: map; }
-.tb[data-k="cam"] { grid-area: cam; }
-.tb-action { grid-area: act; padding: 12px 22px; background: var(--ink); color: var(--paper); font-size: 16px; animation: pulse 1.4s ease-in-out infinite; }
-.tb-brake { grid-area: brake; width: 84px; height: 84px; border-radius: 50%; background: #e7d3aa; }
-.tb-gas { grid-area: gas; width: 104px; height: 104px; border-radius: 50%; background: var(--accent); color: #fff6e0; box-shadow: 0 5px 0 #8a2c1a, 0 8px 20px rgba(40,25,10,0.25); }
+.tb-action { padding: 12px 22px; background: var(--ink); color: var(--paper); font-size: 16px; animation: pulse 1.4s ease-in-out infinite; }
+.tb-brake { width: 84px; height: 84px; border-radius: 50%; background: #e7d3aa; }
+.tb-gas { width: 104px; height: 104px; border-radius: 50%; background: var(--accent); color: #fff6e0; box-shadow: 0 5px 0 #8a2c1a, 0 8px 20px rgba(40,25,10,0.25); }
 .tb-gas.down { box-shadow: 0 1px 0 #8a2c1a; }
 .touch-ui.onfoot .tb-brake { visibility: hidden; }
 .touch-ui.onfoot .tb-gas { width: 84px; height: 84px; }
+.touch-ui.flying .tb-brake { font-size: 13px; }
 @keyframes pulse { 50% { transform: scale(1.06); } }
 @media (prefers-reduced-motion: reduce) { .tb-action { animation: none; } }
 
@@ -183,6 +194,9 @@ body.touch .mini-wrap { transform: scale(0.62); transform-origin: top right; rig
   .stick { width: 116px; height: 116px; }
   .tb-gas { width: 88px; height: 88px; }
   .tb-brake { width: 70px; height: 70px; }
+  /* horizontal: los botones chicos en columna a la izquierda, para no tapar el minimapa */
+  .tbtns { position: absolute; }
+  .tb-extras { position: absolute; right: 100%; bottom: 0; margin-right: 12px; flex-direction: column; flex-wrap: nowrap; align-items: flex-end; }
 }
 
 /* título en pantallas bajas (celular horizontal) */

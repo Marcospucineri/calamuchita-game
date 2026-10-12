@@ -143,7 +143,7 @@ export class Input {
       if (sx || sy) { s.moveX = sx; s.moveY = sy; s.run = Math.hypot(sx, sy) > 0.85; }
       s.jump = s.jump || t.jump;
       // joystick arriba = trompa abajo (igual que la flecha ↑)
-      s.pitch = s.pitch || Number(t.pitchUp) - Number(t.pitchDown) || -sy;
+      s.pitch = s.pitch || -sy;
       s.interactPressed = s.interactPressed || t.consume('act');
       s.mapPressed = s.mapPressed || t.consume('map');
       s.cameraPressed = s.cameraPressed || t.consume('cam');
