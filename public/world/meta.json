@@ -1,0 +1,155 @@
+{
+ "version": 1,
+ "generated": "2026-10-12T04:30:28.143Z",
+ "source": {
+  "osm": "© OpenStreetMap contributors (ODbL)",
+  "osm_base": "2026-10-11T21:49:35Z",
+  "dem": "Terrarium elevation tiles (Mapzen/AWS Open Data: SRTM, GMTED y otros)"
+ },
+ "origin": {
+  "lat": -31.9765,
+  "lon": -64.559,
+  "mPerDegLat": 110886.3765181169,
+  "mPerDegLon": 94517.31320623907
+ },
+ "terrain": {
+  "file": "terrain.bin",
+  "scale": 20,
+  "x0": -5000,
+  "x1": 5000,
+  "n0": -3000,
+  "n1": 12000,
+  "step": 10,
+  "W": 1001,
+  "H": 1501
+ },
+ "ground": {
+  "file": "ground.bin"
+ },
+ "far": {
+  "file": "far.bin",
+  "scale": 10,
+  "x0": -40000,
+  "x1": 25000,
+  "n0": -25000,
+  "n1": 35000,
+  "step": 200,
+  "W": 326,
+  "H": 301
+ },
+ "playArea": {
+  "x0": -4350,
+  "x1": 4160,
+  "n0": -2050,
+  "n1": 11250
+ },
+ "towns": [
+  {
+   "id": "vgb",
+   "name": "Villa General Belgrano",
+   "style": "alpino",
+   "x": 0,
+   "n": 0,
+   "r": 1700
+  },
+  {
+   "id": "lr",
+   "name": "Los Reartes",
+   "style": "criollo",
+   "x": -1900,
+   "n": 6800,
+   "r": 1700
+  },
+  {
+   "id": "vcp",
+   "name": "Villa Ciudad Parque",
+   "style": "serrano",
+   "x": 1500,
+   "n": 7600,
+   "r": 2300
+  }
+ ],
+ "portal": {
+  "x": 705.3,
+  "n": -434.9,
+  "y": 745.582667980957,
+  "heading": 2.954949367531011,
+  "width": 7.5
+ },
+ "start": {
+  "x": 721.8041066142218,
+  "n": -514.1102859250017,
+  "heading": 1.314031139349423
+ },
+ "landmarks": [
+  {
+   "type": "arcoVGB",
+   "name": "Arco de Villa General Belgrano",
+   "x": 705.3,
+   "n": -434.9,
+   "y": 745.582667980957,
+   "heading": 2.954949367531011,
+   "width": 7.5
+  },
+  {
+   "type": "arcoVCP",
+   "name": "Arco de Villa Ciudad Parque",
+   "x": 3336.6,
+   "n": 7002.2,
+   "y": 876.6874578369141,
+   "heading": 2.9275319700259743,
+   "width": 7
+  },
+  {
+   "type": "botella",
+   "name": "La botella de Las Magnolias",
+   "x": 1582.0578827388638,
+   "n": 634.41177413575,
+   "y": 767.798116876011,
+   "heading": -1.4
+  },
+  {
+   "type": "barril",
+   "name": "Barril Cervecero",
+   "x": 8.5,
+   "n": 42.9,
+   "y": 738.078840057373,
+   "heading": 0
+  },
+  {
+   "type": "totem",
+   "name": "Tótem Oktoberfest",
+   "x": -15.4,
+   "n": -50.1,
+   "y": 737.2383572875976,
+   "heading": 0
+  },
+  {
+   "type": "plaza",
+   "name": "Plaza Joven",
+   "x": 1988.4149999999997,
+   "n": 7337.0199999999995,
+   "y": 841.9000244140625,
+   "heading": 0,
+   "r": 55,
+   "court": false
+  },
+  {
+   "type": "plaza",
+   "name": "Paseo del Bosque",
+   "x": 587.0315789473683,
+   "n": 7723.136842105264,
+   "y": 809.8380024138137,
+   "heading": 0,
+   "r": 51,
+   "court": true
+  }
+ ],
+ "counts": {
+  "roads": 1645,
+  "rivers": 70,
+  "buildings": 5615,
+  "trees": 248158,
+  "pois": 26
+ }
+}
