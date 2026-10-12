@@ -1,5 +1,6 @@
 import { bus } from '../core/EventBus';
 import { kindLabel } from '../gameplay/POI';
+import { getAirfield } from '../world/Airfield';
 import { WorldData } from '../world/WorldData';
 import { MapRenderer, Minimap } from './Minimap';
 
@@ -24,9 +25,14 @@ export class HUD {
   readonly minimap: Minimap;
   readonly map: MapRenderer;
   private lastPlace = '';
+  private vehicle: 'car' | 'plane' = 'car';
+  private carHelp = '';
+  private flightInfo!: HTMLElement;
   /** Lo define el juego: viajar a un punto (coordenadas del pipeline). */
   onTravel: ((x: number, n: number, label: string) => void) | null = null;
   onClose: (() => void) | null = null;
+  onVehicleChange: ((vehicle: 'car' | 'plane') => void) | null = null;
+  onReturnToAirfield: (() => void) | null = null;
   private mapOpen = false;
 
   constructor(private w: WorldData, parent: HTMLElement) {
@@ -37,6 +43,11 @@ export class HUD {
     this.root.innerHTML = `
       <div class="place"><div class="place-name"></div><div class="place-sub"></div></div>
       <div class="postales" title="Postales descubiertas"><span class="postal-ico"></span><b>0</b>/<span>0</span></div>
+      <div class="vehicle-switch" role="group" aria-label="Elegí tu vehículo">
+        <button data-vehicle="car" aria-pressed="true">Auto</button>
+        <button data-vehicle="plane" aria-pressed="false">Avioneta</button>
+      </div>
+      <div class="flight-info hidden"><b>En pista</b><span>0 m sobre el terreno</span></div>
       <div class="mini-wrap"></div>
       <div class="speedo"><b>0</b><span>km/h</span></div>
       <div class="prompt hidden"></div>
@@ -49,6 +60,7 @@ export class HUD {
           <li><kbd>E</kbd> bajar o subir al auto</li>
           <li><kbd>Shift</kbd> correr</li>
           <li><kbd>M</kbd> mapa · <kbd>C</kbd> cámara (5 vistas) · <kbd>R</kbd> enderezar</li>
+          <li><kbd>N</kbd> música (3 temas o silencio)</li>
           <li>Arrastrá el mouse para mirar · rueda para zoom</li>
           <li><kbd>H</kbd> ocultar esta ayuda</li>
         </ul>
@@ -56,6 +68,19 @@ export class HUD {
       <div class="bigmap hidden"><div class="bigmap-card"><div class="bigmap-head"><div><h2>Valle de Calamuchita</h2><span>Tocá cualquier punto del mapa para viajar ahí</span></div><button class="bigmap-close" aria-label="Cerrar mapa">✕</button></div><div class="trips" aria-label="Viaje rápido"></div><div class="bigmap-body"><canvas></canvas><div class="travel-pin hidden"></div></div><div class="bigmap-foot">Datos: © colaboradores de OpenStreetMap · Relieve: Terrarium / AWS Open Data · <kbd>M</kbd> para cerrar</div></div></div>
     `;
     parent.appendChild(this.root);
+    // La activación por teclado de los botones no debe accionar el vehículo.
+    // Después de elegir con mouse/touch, Espacio vuelve a controlar el vehículo.
+    // Una activación por teclado conserva el foco para seguir navegando los botones.
+    this.root.addEventListener('click', (e) => {
+      if (e.detail > 0 && e.target instanceof Element) e.target.closest('button')?.blur();
+    });
+    this.root.addEventListener('keydown', (e) => {
+      if (e.target instanceof HTMLButtonElement && (e.code === 'Space' || e.code === 'Enter')) e.stopPropagation();
+    });
+    this.root.addEventListener('click', (e) => {
+      // Un botón pulsado con el mouse no debe quedarse con Espacio y bloquear el ascenso.
+      if (e.detail > 0 && e.target instanceof HTMLButtonElement) e.target.blur();
+    });
     const q = <T extends HTMLElement>(s: string) => this.root.querySelector(s) as T;
     this.place = q('.place-name');
     this.placeSub = q('.place-sub');
@@ -65,6 +90,11 @@ export class HUD {
     this.toastBox = q('.toasts');
     this.postales = q('.postales');
     this.help = q('.help');
+    this.carHelp = this.help.innerHTML;
+    this.flightInfo = q('.flight-info');
+    for (const b of this.root.querySelectorAll<HTMLButtonElement>('.vehicle-switch button')) {
+      b.addEventListener('click', () => this.onVehicleChange?.(b.dataset.vehicle as 'car' | 'plane'));
+    }
     this.bigMap = q('.bigmap');
     this.bigCanvas = q('.bigmap canvas');
     this.setupTravel();
@@ -80,6 +110,44 @@ export class HUD {
       this.setFound(e.found);
     });
     bus.on('toast', (e) => this.toast(e.text, e.sub));
+  }
+
+  setVehicle(vehicle: 'car' | 'plane'): void {
+    if (this.vehicle === vehicle && this.root.dataset.vehicle === vehicle) return;
+    this.vehicle = vehicle;
+    this.root.dataset.vehicle = vehicle;
+    const flying = vehicle === 'plane';
+    for (const b of this.root.querySelectorAll<HTMLButtonElement>('.vehicle-switch button')) {
+      b.setAttribute('aria-pressed', String(b.dataset.vehicle === vehicle));
+    }
+    this.flightInfo.classList.toggle('hidden', !flying);
+    this.help.innerHTML = flying ? `
+      <h3>Avioneta</h3>
+      <ul>
+        <li><kbd>W</kbd> acelerar · <kbd>S</kbd> desacelerar</li>
+        <li><kbd>A</kbd><kbd>D</kbd> o <kbd>←</kbd><kbd>→</kbd> girar (planea inclinando las alas)</li>
+        <li><kbd>↑</kbd> baja la trompa · <kbd>↓</kbd> sube la trompa</li>
+        <li>Acelerá por la pista y tirá <kbd>↓</kbd> para despegar</li>
+        <li><kbd>R</kbd> volver al aeroclub</li>
+        <li><kbd>M</kbd> mapa · <kbd>C</kbd> cámara (5 vistas) · <kbd>N</kbd> música · <kbd>H</kbd> ayuda</li>
+        <li>Gamepad: RT/LT motor · stick izquierdo giro y trompa (adelante baja) · LB volver</li>
+      </ul>` : this.carHelp;
+    this.help.classList.remove('faded');
+    for (const b of this.root.querySelectorAll<HTMLButtonElement>('.ground-trip')) {
+      b.classList.toggle('hidden', flying);
+      b.disabled = flying;
+    }
+    this.root.querySelector('.airfield-return')!.classList.toggle('hidden', !flying);
+    this.root.querySelector('.bigmap-head span')!.textContent = flying
+      ? 'La avioneta siempre parte del Aeroclub de Villa General Belgrano. Para viajar por tierra, elegí Auto.'
+      : 'Tocá cualquier punto del mapa para viajar ahí';
+    this.bigCanvas.style.cursor = flying ? 'default' : 'crosshair';
+    this.root.querySelector('.travel-pin')!.classList.add('hidden');
+  }
+
+  setFlight(altitude: number, grounded: boolean): void {
+    this.flightInfo.querySelector('b')!.textContent = grounded ? 'En tierra' : 'En vuelo';
+    this.flightInfo.querySelector('span')!.textContent = `${Math.max(0, Math.round(altitude))} m sobre el terreno`;
   }
 
   setFound(n: number): void {
@@ -189,6 +257,16 @@ export class HUD {
         g.fillText(p.name, px, py - 27);
       }
     }
+    const airfield = getAirfield(this.w);
+    const [ax, ay] = this.map.toPx(airfield.x, airfield.n);
+    g.fillStyle = '#355a2a';
+    g.strokeStyle = '#fff6e0';
+    g.lineWidth = 5;
+    g.beginPath(); g.arc(ax, ay, 20, 0, Math.PI * 2); g.fill(); g.stroke();
+    g.font = '800 38px Nunito, sans-serif';
+    g.lineWidth = 9;
+    g.strokeText('Aeroclub de VGB', ax, ay - 34);
+    g.fillText('Aeroclub de VGB', ax, ay - 34);
     const [mx, my] = this.map.toPx(x, n);
     g.fillStyle = '#2d2016';
     g.strokeStyle = '#fff6e0';
@@ -203,6 +281,7 @@ export class HUD {
     const add = (label: string, l?: { x: number; n: number }) => { if (l) trips.push({ label, x: l.x, n: l.n }); };
     add('Arco de VGB', lm('arcoVGB'));
     add('Centro de VGB', lm('barril'));
+    add('Aeroclub de VGB', getAirfield(w));
     add('La botella', lm('botella'));
     const lr = w.meta.towns.find((t) => t.id === 'lr');
     const capilla = w.pois.find((p) => /Inmaculada/.test(p.name));
@@ -212,11 +291,16 @@ export class HUD {
     const box = this.root.querySelector('.trips') as HTMLElement;
     for (const t of trips) {
       const b = document.createElement('button');
-      b.className = 'trip';
+      b.className = 'trip ground-trip';
       b.textContent = t.label;
-      b.addEventListener('click', () => this.onTravel?.(t.x, t.n, t.label));
+      b.addEventListener('click', () => { if (this.vehicle === 'car') this.onTravel?.(t.x, t.n, t.label); });
       box.appendChild(b);
     }
+    const back = document.createElement('button');
+    back.className = 'trip airfield-return hidden';
+    back.textContent = 'Volver al aeroclub';
+    back.addEventListener('click', () => this.onReturnToAirfield?.());
+    box.appendChild(back);
     const pin = this.root.querySelector('.travel-pin') as HTMLElement;
     const toWorld = (e: PointerEvent): [number, number] => {
       const r = this.bigCanvas.getBoundingClientRect();
@@ -225,6 +309,7 @@ export class HUD {
       return this.map.toWorld(px, py);
     };
     this.bigCanvas.addEventListener('pointerdown', (e) => {
+      if (this.vehicle === 'plane') return;
       const [x, n] = toWorld(e);
       const pa = w.meta.playArea;
       if (x < pa.x0 || x > pa.x1 || n < pa.n0 || n > pa.n1) { this.toast('Fuera del área de juego', 'Elegí un punto dentro del valle'); return; }
@@ -234,7 +319,7 @@ export class HUD {
       pin.classList.remove('hidden');
       void r;
       const town = w.townAt(x, n);
-      setTimeout(() => { pin.classList.add('hidden'); this.onTravel?.(x, n, town ? town.town.name : 'el valle'); }, 260);
+      setTimeout(() => { pin.classList.add('hidden'); if (this.vehicle === 'car') this.onTravel?.(x, n, town ? town.town.name : 'el valle'); }, 260);
     });
     (this.root.querySelector('.bigmap-close') as HTMLElement).addEventListener('click', () => this.onClose?.());
   }

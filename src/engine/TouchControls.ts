@@ -31,9 +31,10 @@ export class TouchControls {
       <div class="tbtns">
         <button class="tb tb-small" data-k="map" aria-label="Mapa">Mapa</button>
         <button class="tb tb-small" data-k="cam" aria-label="Cambiar cámara">Cámara</button>
+        <button class="tb tb-small" data-k="music" aria-label="Cambiar música">Música</button>
         <button class="tb tb-small tb-flight hidden" data-k="reset" aria-label="Volver al aeroclub">Aeroclub</button>
-        <button class="tb tb-flight hidden" data-k="pitchUp" aria-label="Subir la avioneta">Subir</button>
-        <button class="tb tb-flight hidden" data-k="pitchDown" aria-label="Bajar la avioneta">Bajar</button>
+        <button class="tb tb-flight hidden" data-k="pitchUp" aria-label="Subir la trompa">Trompa ▲</button>
+        <button class="tb tb-flight hidden" data-k="pitchDown" aria-label="Bajar la trompa">Trompa ▼</button>
         <button class="tb tb-action hidden" data-k="act">Bajar</button>
         <button class="tb tb-brake" data-k="brake" aria-label="Frenar o marcha atrás">Freno</button>
         <button class="tb tb-gas" data-k="gas" aria-label="Acelerar o saltar">Acelerar</button>

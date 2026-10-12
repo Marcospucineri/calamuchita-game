@@ -5,7 +5,9 @@ export interface InputState {
   throttle: number; // 0..1
   brake: number; // 0..1
   steer: number; // -1 (izq) .. 1 (der)
-  pitch: number; // avioneta: -1 bajar .. 1 subir
+  pitch: number; // avioneta: -1 baja la trompa (↑) .. 1 sube la trompa (↓)
+  planeThrottle: number; // avioneta: acelerar (W)
+  planeBrake: number; // avioneta: desacelerar (S)
   moveX: number; // a pie: -1..1 (derecha +)
   moveY: number; // a pie: -1..1 (adelante +)
   run: boolean;
@@ -16,6 +18,7 @@ export interface InputState {
   resetPressed: boolean;
   pausePressed: boolean;
   cameraPressed: boolean;
+  musicPressed: boolean;
   lookX: number; // delta de mouse/stick
   lookY: number;
   zoom: number;
@@ -80,7 +83,10 @@ export class Input {
       throttle: this.k('KeyW', 'ArrowUp') ? 1 : 0,
       brake: this.k('KeyS', 'ArrowDown') ? 1 : 0,
       steer: (this.k('KeyD', 'ArrowRight') ? 1 : 0) - (this.k('KeyA', 'ArrowLeft') ? 1 : 0),
-      pitch: (this.k('Space') ? 1 : 0) - (this.k('ShiftLeft', 'ShiftRight') ? 1 : 0),
+      // avioneta, como en un simulador: ↑ baja la trompa, ↓ la sube
+      pitch: (this.k('ArrowDown') ? 1 : 0) - (this.k('ArrowUp') ? 1 : 0),
+      planeThrottle: this.k('KeyW') ? 1 : 0,
+      planeBrake: this.k('KeyS') ? 1 : 0,
       moveX: (this.k('KeyD', 'ArrowRight') ? 1 : 0) - (this.k('KeyA', 'ArrowLeft') ? 1 : 0),
       moveY: (this.k('KeyW', 'ArrowUp') ? 1 : 0) - (this.k('KeyS', 'ArrowDown') ? 1 : 0),
       run: this.k('ShiftLeft', 'ShiftRight'),
@@ -91,6 +97,7 @@ export class Input {
       resetPressed: this.p('KeyR'),
       pausePressed: this.p('Escape', 'KeyP'),
       cameraPressed: this.p('KeyC'),
+      musicPressed: this.p('KeyN'),
       lookX: this.lookDX,
       lookY: this.lookDY,
       zoom: this.wheel,
@@ -106,10 +113,13 @@ export class Input {
       const lt = pad.buttons[6]?.value ?? 0;
       s.throttle = Math.max(s.throttle, rt);
       s.brake = Math.max(s.brake, lt);
+      s.planeThrottle = Math.max(s.planeThrottle, rt);
+      s.planeBrake = Math.max(s.planeBrake, lt);
       s.steer = Math.abs(dz(pad.axes[0])) > Math.abs(s.steer) ? dz(pad.axes[0]) : s.steer;
       s.moveX = dz(pad.axes[0]) || s.moveX;
       s.moveY = -dz(pad.axes[1]) || s.moveY;
-      s.pitch = s.pitch || -dz(pad.axes[1] ?? 0);
+      // stick hacia adelante baja la trompa, hacia atrás la sube
+      s.pitch = s.pitch || dz(pad.axes[1] ?? 0);
       s.lookX += dz(pad.axes[2] ?? 0) * 12;
       s.lookY += dz(pad.axes[3] ?? 0) * 8;
       s.run = s.run || btn(10) || btn(1);
@@ -120,21 +130,24 @@ export class Input {
       s.pausePressed = s.pausePressed || edge(9);
       s.resetPressed = s.resetPressed || edge(4);
       s.cameraPressed = s.cameraPressed || edge(5);
+      s.musicPressed = s.musicPressed || edge(12); // cruceta arriba
       this.prevPad = pad.buttons.map((b) => b.pressed);
     }
 
     const t = this.touch;
     if (t) {
       const sx = Math.abs(t.stickX) > 0.08 ? t.stickX : 0, sy = Math.abs(t.stickY) > 0.08 ? t.stickY : 0;
-      if (t.gas) s.throttle = 1;
-      if (t.brake) s.brake = 1;
+      if (t.gas) { s.throttle = 1; s.planeThrottle = 1; }
+      if (t.brake) { s.brake = 1; s.planeBrake = 1; }
       if (sx) s.steer = sx;
       if (sx || sy) { s.moveX = sx; s.moveY = sy; s.run = Math.hypot(sx, sy) > 0.85; }
       s.jump = s.jump || t.jump;
-      s.pitch = s.pitch || Number(t.pitchUp) - Number(t.pitchDown);
+      // joystick arriba = trompa abajo (igual que la flecha ↑)
+      s.pitch = s.pitch || Number(t.pitchUp) - Number(t.pitchDown) || -sy;
       s.interactPressed = s.interactPressed || t.consume('act');
       s.mapPressed = s.mapPressed || t.consume('map');
       s.cameraPressed = s.cameraPressed || t.consume('cam');
+      s.musicPressed = s.musicPressed || t.consume('music');
       s.resetPressed = s.resetPressed || t.consume('reset');
     }
 

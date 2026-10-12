@@ -48,6 +48,14 @@ export class Aircraft {
     this.reset();
   }
 
+  /** Ojos del piloto en coordenadas de la avioneta (X hacia la hélice). */
+  readonly pilotEye = new THREE.Vector3(0.5, 1.05, 0);
+
+  /** Primera persona: solo la vista del piloto, sin dibujar la avioneta. */
+  setCockpit(on: boolean): void {
+    this.mesh.visible = !on;
+  }
+
   get position(): THREE.Vector3 { return this.currPos; }
   get rotation(): THREE.Quaternion { return this.currRot; }
 
@@ -77,8 +85,8 @@ export class Aircraft {
     this.prevPos.copy(this.currPos);
     this.prevRot.copy(this.currRot);
 
-    const throttle = THREE.MathUtils.clamp(input.throttle, 0, 1);
-    const brake = THREE.MathUtils.clamp(input.brake, 0, 1);
+    const throttle = THREE.MathUtils.clamp(input.planeThrottle, 0, 1);
+    const brake = THREE.MathUtils.clamp(input.planeBrake, 0, 1);
     const steer = THREE.MathUtils.clamp(input.steer, -1, 1);
     const pitchInput = THREE.MathUtils.clamp(input.pitch, -1, 1);
     // La potencia se conserva al soltar el acelerador para poder recorrer el valle cómodamente.
@@ -99,7 +107,7 @@ export class Aircraft {
       this.grounded = false;
       this.verticalSpeed = 2.5;
       this.assistedClimb = pitchInput === 0;
-      bus.emit('toast', { text: '¡Buen vuelo!', sub: 'Espacio para subir · Shift para bajar · A/D para girar' });
+      bus.emit('toast', { text: '¡Buen vuelo!', sub: '↓ sube la trompa · ↑ la baja · A/D o ←/→ para girar' });
     }
 
     const previousGround = this.world.heightAt(this.currPos.x, -this.currPos.z);
