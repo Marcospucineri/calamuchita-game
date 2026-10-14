@@ -3,10 +3,12 @@ import { QualityLevel } from './core/Config';
 import { Game } from './core/Game';
 import { Physics } from './engine/Physics';
 import { TouchControls } from './engine/TouchControls';
+import { guardBrowserGestures } from './engine/BrowserGuard';
 import { SaveSystem } from './gameplay/SaveSystem';
 import { CAR_PAINTS, CarPaint } from './player/Vehicle';
 import { WorldData } from './world/WorldData';
 
+guardBrowserGestures();
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const ui = document.getElementById('ui') as HTMLElement;
 

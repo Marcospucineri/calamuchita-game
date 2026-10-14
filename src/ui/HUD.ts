@@ -3,6 +3,7 @@ import { kindLabel } from '../gameplay/POI';
 import { getAirfield } from '../world/Airfield';
 import { WorldData } from '../world/WorldData';
 import { MapRenderer, Minimap } from './Minimap';
+import { BigMapView } from './BigMap';
 
 const SURFACE_LABEL: Record<string, string> = {
   asphalt: 'asfalto', paving: 'adoquín', compacted: 'compactado', gravel: 'ripio', dirt: 'tierra', grass: 'campo', water: 'agua',
@@ -22,6 +23,7 @@ export class HUD {
   private help!: HTMLElement;
   private bigMap!: HTMLElement;
   private bigCanvas!: HTMLCanvasElement;
+  private bigView!: BigMapView;
   readonly minimap: Minimap;
   readonly map: MapRenderer;
   private lastPlace = '';
@@ -34,6 +36,7 @@ export class HUD {
   onVehicleChange: ((vehicle: 'car' | 'plane') => void) | null = null;
   onReturnToAirfield: (() => void) | null = null;
   private mapOpen = false;
+  private pick: { x: number; n: number; label: string } | null = null;
 
   constructor(private w: WorldData, parent: HTMLElement) {
     this.map = new MapRenderer(w);
@@ -65,7 +68,7 @@ export class HUD {
           <li><kbd>H</kbd> ocultar esta ayuda</li>
         </ul>
       </div>
-      <div class="bigmap hidden"><div class="bigmap-card"><div class="bigmap-head"><div><h2>Valle de Calamuchita</h2><span>Tocá cualquier punto del mapa para viajar ahí</span></div><button class="bigmap-close" aria-label="Cerrar mapa">✕</button></div><div class="trips" aria-label="Viaje rápido"></div><div class="bigmap-body"><canvas></canvas><div class="travel-pin hidden"></div></div><div class="bigmap-foot">Datos: © colaboradores de OpenStreetMap · Relieve: Terrarium / AWS Open Data · <kbd>M</kbd> para cerrar</div></div></div>
+      <div class="bigmap hidden"><div class="bigmap-card"><div class="bigmap-head"><div><h2>Valle de Calamuchita</h2><span>Arrastrá para moverte, acercá con la rueda o dos dedos y tocá un punto para viajar</span></div><button class="bigmap-close" aria-label="Cerrar mapa">✕</button></div><div class="trips" aria-label="Viaje rápido"></div><div class="bigmap-body"><canvas aria-label="Mapa del valle"></canvas><div class="map-zoom"><button data-z="in" aria-label="Acercar">+</button><button data-z="out" aria-label="Alejar">−</button><button data-z="me" aria-label="Centrar en tu posición">◎</button></div><div class="map-confirm hidden" role="group" aria-label="Confirmar viaje"><span></span><button class="go">Viajar</button><button class="cancel" aria-label="Cancelar">✕</button></div></div><div class="bigmap-foot">Datos: © colaboradores de OpenStreetMap · Relieve: Terrarium / AWS Open Data · <kbd>+</kbd> <kbd>−</kbd> zoom · <kbd>M</kbd> para cerrar</div></div></div>
     `;
     parent.appendChild(this.root);
     // La activación por teclado de los botones no debe accionar el vehículo.
@@ -140,9 +143,8 @@ export class HUD {
     this.root.querySelector('.airfield-return')!.classList.toggle('hidden', !flying);
     this.root.querySelector('.bigmap-head span')!.textContent = flying
       ? 'La avioneta siempre parte del Aeroclub de Villa General Belgrano. Para viajar por tierra, elegí Auto.'
-      : 'Tocá cualquier punto del mapa para viajar ahí';
-    this.bigCanvas.style.cursor = flying ? 'default' : 'crosshair';
-    this.root.querySelector('.travel-pin')!.classList.add('hidden');
+      : 'Arrastrá para moverte, acercá con la rueda o dos dedos y tocá un punto para viajar';
+    this.cancelPick();
   }
 
   setFlight(altitude: number, grounded: boolean): void {
@@ -206,72 +208,15 @@ export class HUD {
   toggleMap(x: number, n: number, discovered: Set<string>): void {
     this.mapOpen = !this.mapOpen;
     this.bigMap.classList.toggle('hidden', !this.mapOpen);
-    if (!this.mapOpen) return;
-    const src = this.map.canvas;
-    const c = this.bigCanvas;
-    c.width = src.width;
-    c.height = src.height;
-    const g = c.getContext('2d')!;
-    g.drawImage(src, 0, 0);
-    // en el mapa grande las rutas se ven más gruesas para que se lean al achicar
-    g.lineCap = g.lineJoin = 'round';
-    for (const r of this.w.roads) {
-      if (!r.major && r.surface !== 'asphalt') continue;
-      g.strokeStyle = r.major ? '#e0a92e' : 'rgba(255,250,235,0.9)';
-      g.lineWidth = r.major ? 6 : 2.7;
-      g.beginPath();
-      for (let k = 0; k < r.p.length; k += 3) { const [px, py] = this.map.toPx(r.p[k], r.p[k + 1]); k ? g.lineTo(px, py) : g.moveTo(px, py); }
-      g.stroke();
-    }
-    for (const rv of this.w.rivers) {
-      if (rv.kind !== 'river') continue;
-      g.strokeStyle = '#3f7fa6';
-      g.lineWidth = 7;
-      g.beginPath();
-      for (let k = 0; k < rv.p.length; k += 3) { const [px, py] = this.map.toPx(rv.p[k], rv.p[k + 1]); k ? g.lineTo(px, py) : g.moveTo(px, py); }
-      g.stroke();
-    }
-    g.textAlign = 'center';
-    for (const t of this.w.meta.towns) {
-      const [px, py] = this.map.toPx(t.x, t.n);
-      g.font = '800 80px Bitter, Georgia, serif';
-      g.lineWidth = 15;
-      g.strokeStyle = 'rgba(255,248,230,0.9)';
-      g.strokeText(t.name, px, py - 60);
-      g.fillStyle = '#5a2c18';
-      g.fillText(t.name, px, py - 60);
-    }
-    for (const p of this.w.pois) {
-      const [px, py] = this.map.toPx(p.x, p.n);
-      const got = discovered.has(p.id);
-      g.fillStyle = got ? '#3d7a46' : '#c8452c';
-      g.strokeStyle = '#fff6e0';
-      g.lineWidth = 5;
-      g.beginPath(); g.arc(px, py, 17, 0, Math.PI * 2); g.fill(); g.stroke();
-      if (got) {
-        g.font = '700 36px Nunito, sans-serif';
-        g.lineWidth = 9;
-        g.strokeStyle = 'rgba(255,248,230,0.9)';
-        g.strokeText(p.name, px, py - 27);
-        g.fillStyle = '#2d2016';
-        g.fillText(p.name, px, py - 27);
-      }
-    }
-    const airfield = getAirfield(this.w);
-    const [ax, ay] = this.map.toPx(airfield.x, airfield.n);
-    g.fillStyle = '#355a2a';
-    g.strokeStyle = '#fff6e0';
-    g.lineWidth = 5;
-    g.beginPath(); g.arc(ax, ay, 20, 0, Math.PI * 2); g.fill(); g.stroke();
-    g.font = '800 38px Nunito, sans-serif';
-    g.lineWidth = 9;
-    g.strokeText('Aeroclub de VGB', ax, ay - 34);
-    g.fillText('Aeroclub de VGB', ax, ay - 34);
-    const [mx, my] = this.map.toPx(x, n);
-    g.fillStyle = '#2d2016';
-    g.strokeStyle = '#fff6e0';
-    g.lineWidth = 8;
-    g.beginPath(); g.arc(mx, my, 30, 0, Math.PI * 2); g.fill(); g.stroke();
+    this.cancelPick();
+    if (this.mapOpen) this.bigView.show(x, n, discovered);
+    else this.bigView.hide();
+  }
+
+  private cancelPick(): void {
+    this.pick = null;
+    this.bigView?.clearPin();
+    this.root.querySelector('.map-confirm')?.classList.add('hidden');
   }
 
   private setupTravel(): void {
@@ -301,25 +246,41 @@ export class HUD {
     back.textContent = 'Volver al aeroclub';
     back.addEventListener('click', () => this.onReturnToAirfield?.());
     box.appendChild(back);
-    const pin = this.root.querySelector('.travel-pin') as HTMLElement;
-    const toWorld = (e: PointerEvent): [number, number] => {
-      const r = this.bigCanvas.getBoundingClientRect();
-      const px = ((e.clientX - r.left) / r.width) * this.bigCanvas.width;
-      const py = ((e.clientY - r.top) / r.height) * this.bigCanvas.height;
-      return this.map.toWorld(px, py);
-    };
-    this.bigCanvas.addEventListener('pointerdown', (e) => {
+    // mapa con zoom propio: tocar un punto deja un pin y se confirma el viaje
+    this.bigView = new BigMapView(w, this.map, this.bigCanvas);
+    const confirm = this.root.querySelector('.map-confirm') as HTMLElement;
+    this.bigView.onPick = (x, n) => {
       if (this.vehicle === 'plane') return;
-      const [x, n] = toWorld(e);
       const pa = w.meta.playArea;
       if (x < pa.x0 || x > pa.x1 || n < pa.n0 || n > pa.n1) { this.toast('Fuera del área de juego', 'Elegí un punto dentro del valle'); return; }
-      const r = this.bigCanvas.getBoundingClientRect(), br = (this.bigCanvas.parentElement as HTMLElement).getBoundingClientRect();
-      pin.style.left = `${e.clientX - br.left}px`;
-      pin.style.top = `${e.clientY - br.top}px`;
-      pin.classList.remove('hidden');
-      void r;
       const town = w.townAt(x, n);
-      setTimeout(() => { pin.classList.add('hidden'); if (this.vehicle === 'car') this.onTravel?.(x, n, town ? town.town.name : 'el valle'); }, 260);
+      this.pick = { x, n, label: town ? town.town.name : 'el valle' };
+      this.bigView.pin = { x, n };
+      this.bigView.zoom(1); // redibuja
+      confirm.querySelector('span')!.textContent = town ? `Viajar a ${town.town.name}` : 'Viajar a este punto';
+      confirm.classList.remove('hidden');
+    };
+    const go = () => {
+      const p = this.pick;
+      if (!p || this.vehicle !== 'car') return;
+      this.cancelPick();
+      this.onTravel?.(p.x, p.n, p.label);
+    };
+    confirm.querySelector('.go')!.addEventListener('click', go);
+    confirm.querySelector('.cancel')!.addEventListener('click', () => this.cancelPick());
+    for (const b of this.root.querySelectorAll<HTMLButtonElement>('.map-zoom button')) {
+      b.addEventListener('click', () => {
+        if (b.dataset.z === 'in') this.bigView.zoom(1.6);
+        else if (b.dataset.z === 'out') this.bigView.zoom(1 / 1.6);
+        else this.bigView.centerOnPlayer();
+      });
+    }
+    window.addEventListener('keydown', (e) => {
+      if (!this.mapOpen || e.ctrlKey || e.metaKey) return;
+      if (e.key === '+' || e.key === '=') this.bigView.zoom(1.6);
+      else if (e.key === '-' || e.key === '_') this.bigView.zoom(1 / 1.6);
+      else if (e.key === 'Enter' && this.pick && !(e.target instanceof HTMLButtonElement)) go();
+      else if (e.key === 'Escape' && this.pick) this.cancelPick();
     });
     (this.root.querySelector('.bigmap-close') as HTMLElement).addEventListener('click', () => this.onClose?.());
   }

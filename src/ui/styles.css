@@ -12,6 +12,13 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: #bfd9e8; font-family: var(--body); color: var(--ink); }
+/* juego a pantalla completa: sin selección de texto, menú de toque largo, resaltado al tocar ni zoom de la página */
+html, body {
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
+  touch-action: none; overscroll-behavior: none; -webkit-text-size-adjust: 100%; text-size-adjust: 100%;
+}
+.title { touch-action: pan-y; } /* en pantallas bajas la portada se desplaza */
+.trips { touch-action: pan-x; } /* fila de viajes rápidos */
 #game { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; touch-action: none; }
 #ui { position: fixed; inset: 0; pointer-events: none; }
 .hidden { display: none !important; }
@@ -120,11 +127,10 @@ kbd {
 .help h3 { margin: 0 0 6px; font: 800 15px var(--display); }
 .help ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
 .bigmap { position: absolute; inset: 0; background: rgba(30, 22, 12, 0.45); display: grid; place-items: center; pointer-events: auto; }
-.bigmap-card { background: var(--paper); border-radius: 16px; box-shadow: var(--shadow); padding: 14px; width: min(92vw, 760px); max-height: 94vh; display: flex; flex-direction: column; }
+.bigmap-card { background: var(--paper); border-radius: 16px; box-shadow: var(--shadow); padding: 14px; width: min(94vw, 1000px); height: min(94vh, 960px); display: flex; flex-direction: column; }
 .bigmap-head h2 { margin: 0; font: 800 22px var(--display); }
 .bigmap-head span { font: 700 12px var(--body); color: var(--ink-soft); }
-.bigmap-body { flex: 1; min-height: 0; margin: 10px 0 8px; display: grid; place-items: center; overflow: hidden; }
-.bigmap-body canvas { max-width: 100%; max-height: calc(94vh - 120px); border-radius: 10px; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1); }
+.bigmap-body { flex: 1; min-height: 160px; margin: 10px 0 8px; overflow: hidden; border-radius: 10px; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1); }
 .bigmap-foot { font: 600 11px var(--body); color: var(--ink-soft); }
 
 @media (max-width: 720px) {
@@ -221,7 +227,23 @@ body.touch .mini-wrap { transform: scale(0.62); transform-origin: top right; rig
 }
 .trip:hover, .trip:focus-visible { background: var(--ink); color: var(--paper); outline: none; }
 .bigmap-body { position: relative; }
-.bigmap-body canvas { cursor: crosshair; touch-action: none; }
+.bigmap-body canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
+.bigmap-body canvas.dragging { cursor: grabbing; }
+.map-zoom { position: absolute; right: 10px; bottom: 10px; display: flex; flex-direction: column; gap: 6px; }
+.map-zoom button {
+  pointer-events: auto; width: 40px; height: 40px; border: none; border-radius: 10px; cursor: pointer;
+  background: var(--paper); color: var(--ink); font: 800 20px/1 var(--body); box-shadow: 0 2px 0 rgba(107,84,64,0.45), 0 4px 12px rgba(40,25,10,0.18);
+}
+.map-zoom button:focus-visible, .map-confirm button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.map-confirm {
+  position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); max-width: calc(100% - 130px);
+  display: flex; align-items: center; gap: 8px; padding: 5px 5px 5px 14px; border-radius: 999px;
+  background: var(--paper); box-shadow: var(--shadow); font: 800 13px var(--body); color: var(--ink); animation: pin 0.2s ease-out;
+}
+.map-confirm span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.map-confirm .go { pointer-events: auto; flex: none; border: none; border-radius: 999px; padding: 9px 16px; cursor: pointer; background: var(--accent); color: #fff6e0; font: 800 13px var(--body); }
+.map-confirm .cancel { pointer-events: auto; flex: none; width: 34px; height: 34px; border: none; border-radius: 50%; cursor: pointer; background: var(--paper-2); color: var(--ink); font: 800 14px var(--body); }
+@media (max-width: 520px) { .map-confirm { left: 10px; right: 60px; transform: none; max-width: none; } }
 .travel-pin {
   position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%;
   background: var(--accent); border: 3px solid #fff6e0; box-shadow: 0 0 0 6px rgba(200,69,44,0.25); pointer-events: none;
@@ -233,14 +255,13 @@ body.touch .mini-wrap { transform: scale(0.62); transform-origin: top right; rig
   .bigmap-head h2 { font-size: 17px; }
   .trips { margin-top: 6px; }
   .trip { padding: 4px 8px; font-size: 11px; }
-  .bigmap-body canvas { max-height: calc(94vh - 130px); }
   .bigmap-foot { display: none; }
+  .bigmap-head span { display: none; }
+  .map-zoom button { width: 36px; height: 36px; }
 }
 .trips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
 .trips::-webkit-scrollbar { display: none; }
 .trip { flex: none; }
-.bigmap-body canvas { max-height: calc(94vh - 175px); }
-@media (max-height: 560px) { .bigmap-body canvas { max-height: calc(94vh - 110px); } }
 
 /* ---------- elegir vehículo / vuelo ---------- */
 .paint-choice { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 4px 0 8px; font: 800 12px var(--body); color: var(--ink-soft); }
