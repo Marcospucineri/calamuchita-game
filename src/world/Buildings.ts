@@ -16,6 +16,10 @@ const ROOF: Record<string, { kind: RoofKind; pitch: number; overhang: number }> 
   serrano: { kind: 'tejuela', pitch: 1.0, overhang: 0.7 },
   rural: { kind: 'chapa', pitch: 0.25, overhang: 0.4 },
   comun: { kind: 'teja', pitch: 0.42, overhang: 0.55 },
+  // locales comerciales (Los Reartes, Villa Ciudad Parque): techo de chapa casi plano
+  localA: { kind: 'chapa', pitch: 0.16, overhang: 0.35 },
+  localB: { kind: 'chapa', pitch: 0.16, overhang: 0.35 },
+  localC: { kind: 'chapa', pitch: 0.16, overhang: 0.35 },
 };
 
 /** Transforma coordenadas locales del edificio (a: a lo largo, b: profundidad) a Three. */

@@ -130,7 +130,8 @@ export function pavingTexture(): THREE.CanvasTexture {
 /** Paredes por estilo. u = metros/4 (un módulo de ventana), v = metros/3 (un piso). */
 export function wallTexture(style: string): THREE.CanvasTexture {
   const [c, g] = canvas(256, 192);
-  const base = style === 'alpino' ? '#efe3c8' : style === 'criollo' ? '#f1ece2' : style === 'serrano' ? '#a77a4f' : style === 'comun' ? '#e9d2b4' : '#e6dccb';
+  const base = style === 'alpino' ? '#efe3c8' : style === 'criollo' ? '#f1ece2' : style === 'serrano' ? '#a77a4f' : style === 'comun' ? '#e9d2b4'
+    : style === 'localA' ? '#f1e7d0' : style === 'localB' ? '#d9e4de' : style === 'localC' ? '#efcfae' : '#e6dccb';
   g.fillStyle = base;
   g.fillRect(0, 0, 256, 192);
   // textura de revoque / madera
@@ -161,7 +162,7 @@ export function wallTexture(style: string): THREE.CanvasTexture {
   }
   // ventana con postigos
   const wx = 92, wy = 34, ww = 72, wh = 62;
-  const shutter = style === 'alpino' ? '#2f5a3a' : style === 'criollo' ? '#3c6a7a' : style === 'comun' ? '#8a8f86' : '#6b3f22';
+  const shutter = style === 'alpino' ? '#2f5a3a' : style === 'criollo' ? '#3c6a7a' : style === 'comun' || style.startsWith('local') ? '#8a8f86' : '#6b3f22';
   g.fillStyle = shutter;
   g.fillRect(wx - 26, wy, 24, wh);
   g.fillRect(wx + ww + 2, wy, 24, wh);

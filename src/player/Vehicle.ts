@@ -5,6 +5,67 @@ import { InputState } from '../engine/Input';
 import { paintedMaterial } from '../render/PaintedMaterial';
 import { WorldData } from '../world/WorldData';
 
+/** Colores del Fiat que se eligen en la pantalla de inicio. `paint` es el color final de la chapa. */
+export const CAR_PAINTS = [
+  { id: 'gris', label: 'Gris claro', paint: null, swatch: '#b9bab6' },
+  { id: 'negro', label: 'Negro', paint: '#2c2e33', swatch: '#24252a' },
+  { id: 'rojo', label: 'Rojo', paint: '#c9301f', swatch: '#b3231b' },
+  { id: 'azul', label: 'Azul', paint: '#2a62bf', swatch: '#1f4f9e' },
+  { id: 'blanco', label: 'Blanco', paint: '#efede6', swatch: '#f4f2ec' },
+] as const;
+export type CarPaint = (typeof CAR_PAINTS)[number]['id'];
+
+const toLin = (c: number) => { c /= 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+const toSrgb = (l: number) => 255 * (l <= 0.0031308 ? l * 12.92 : 1.055 * l ** (1 / 2.4) - 0.055);
+/** Gris de la chapa en la textura original y aclarado que le aplica el material. */
+const BODY_GRAY = 92, BODY_GAIN = 1.85;
+
+/**
+ * Repinta la chapa en la textura del Fiat: la pintura es un gris medio, igual que el degradé de
+ * los vidrios, así que se toma por regiones conectadas (sin cruzar los bordes de ventanas y burletes)
+ * y se conserva el sombreado de cada píxel.
+ */
+function repaint(src: THREE.Texture, hex: string): THREE.Texture {
+  const img = src.image as CanvasImageSource & { width: number; height: number };
+  const W = img.width, H = img.height;
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const g = c.getContext('2d', { willReadFrequently: true })!;
+  g.drawImage(img, 0, 0);
+  const data = g.getImageData(0, 0, W, H);
+  const px = data.data;
+  const gray = (i: number) => px[i * 4];
+  const mask = new Uint8Array(W * H);
+  const okv = (i: number) => { const v = gray(i); return v >= 58 && v <= 120; };
+  // semillas (x, y en una textura de 256): lateral, capot, techo/portón y zona media
+  for (const [sx, sy] of [[50, 160], [50, 210], [225, 60], [120, 170]]) {
+    const x0 = Math.floor((sx / 256) * W), y0 = Math.floor((sy / 256) * H), i0 = y0 * W + x0;
+    if (!okv(i0) || mask[i0]) continue;
+    const stack = [i0];
+    mask[i0] = 1;
+    while (stack.length) {
+      const i = stack.pop()!, x = i % W, y = (i - x) / W;
+      for (const j of [x > 0 ? i - 1 : -1, x < W - 1 ? i + 1 : -1, y > 0 ? i - W : -1, y < H - 1 ? i + W : -1]) {
+        if (j >= 0 && !mask[j] && okv(j)) { mask[j] = 1; stack.push(j); }
+      }
+    }
+  }
+  const col = new THREE.Color(hex);
+  const target = [col.r, col.g, col.b].map((v) => toLin(v * 255) / BODY_GAIN);
+  const base = toLin(BODY_GRAY);
+  for (let i = 0; i < W * H; i++) {
+    if (!mask[i]) continue;
+    const shade = toLin(gray(i)) / base;
+    for (let k = 0; k < 3; k++) px[i * 4 + k] = Math.max(0, Math.min(255, Math.round(toSrgb(Math.min(1, target[k] * shade)))));
+  }
+  g.putImageData(data, 0, 0);
+  // clone() comparte la imagen (Source) con el original: hay que darle una propia
+  const t = src.clone();
+  t.source = new THREE.Source(c);
+  t.needsUpdate = true;
+  return t;
+}
+
 /** Parámetros del auto (sedán clásico argentino genérico). */
 export const SEDAN = {
   mass: 1150,
@@ -45,6 +106,10 @@ export class Vehicle {
   private importedWheelAxis = new THREE.Vector3(0, 0, 1);
   private importedUpAxis = new THREE.Vector3(0, 1, 0);
   private importedModel: THREE.Group | null = null;
+  private bodyMaterial: THREE.MeshLambertMaterial | null = null;
+  private bodyTexture: THREE.Texture | null = null;
+  private paint: CarPaint = 'gris';
+  private paintCache = new Map<CarPaint, THREE.Texture>();
   private interior: THREE.Group | null = null;
   /** Ojos del conductor en coordenadas del auto (X adelante, Z a la derecha; volante a la izquierda). */
   readonly driverEye = new THREE.Vector3(-0.3, 1.1, -0.36);
@@ -132,8 +197,10 @@ export class Vehicle {
           object.material = new THREE.MeshLambertMaterial({
             name: 'Body mate',
             map: object.material.map,
-            color: new THREE.Color().setRGB(1.85, 1.85, 1.85),
+            color: new THREE.Color().setRGB(BODY_GAIN, BODY_GAIN, BODY_GAIN),
           });
+          this.bodyMaterial = object.material;
+          this.bodyTexture = object.material.map;
         }
         let parent: THREE.Object3D | null = object.parent;
         while (parent) {
@@ -187,6 +254,7 @@ export class Vehicle {
       this.fitCabin(finalBounds.clone().translate(fitted.position));
       this.fallbackModel.visible = false;
       this.importedModel = fitted;
+      this.setPaint(this.paint);
     } catch (error) {
       console.warn('No se pudo cargar el modelo 3D del auto; se usa el anterior.', error);
       this.importedWheels = [];
@@ -194,6 +262,23 @@ export class Vehicle {
       this.importedModel = null;
       this.fallbackModel.visible = true;
     }
+  }
+
+  /** Cambia el color de la chapa (si el modelo todavía no cargó, se aplica al cargar). */
+  setPaint(id: CarPaint): void {
+    this.paint = id;
+    const mat = this.bodyMaterial, src = this.bodyTexture;
+    if (!mat || !src) return;
+    const def = CAR_PAINTS.find((p) => p.id === id);
+    let map: THREE.Texture = src;
+    if (def?.paint) {
+      let t = this.paintCache.get(id);
+      if (!t) {
+        try { t = repaint(src, def.paint); this.paintCache.set(id, t); } catch (e) { console.warn('No se pudo repintar el auto', e); }
+      }
+      if (t) map = t;
+    }
+    if (mat.map !== map) { mat.map = map; mat.needsUpdate = true; }
   }
 
   private buildModel(): THREE.Group {

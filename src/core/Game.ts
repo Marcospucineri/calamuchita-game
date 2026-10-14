@@ -14,6 +14,7 @@ import { Aircraft } from '../player/Aircraft';
 import { Vehicle } from '../player/Vehicle';
 import { VehicleAudio } from '../player/VehicleAudio';
 import { Music } from '../engine/Music';
+import { ShopDecor, planShops } from '../world/Shops';
 import { sharedUniforms } from '../render/PaintedMaterial';
 import { HUD } from '../ui/HUD';
 import { Buildings } from '../world/Buildings';
@@ -37,6 +38,7 @@ export class Game {
   readonly pois: POIs;
   readonly audio = new VehicleAudio();
   readonly music = new Music();
+  private shops: ShopDecor;
   private sky: Sky;
   private loop: GameLoop;
   private state: InputState;
@@ -59,7 +61,11 @@ export class Game {
     lap('terrain');
     const roads = new Roads(world, scene);
     lap('roads');
+    // locales comerciales: cambia estilos y saca árboles, por eso va antes de casas y vegetación
+    const shopPlan = planShops(world);
+    console.info(`[calamuchita] locales: ${shopPlan.fronts.filter((f) => f.kind === 'centro').length} centroeuropeos, ${shopPlan.fronts.filter((f) => f.kind === 'local').length} comunes, ${shopPlan.decks.length} decks, ${shopPlan.magnolias.length} en Las Magnolias`);
     const buildings = new Buildings(world, scene);
+    this.shops = new ShopDecor(shopPlan, scene);
     const landmarks = new Landmarks(world, scene);
     const airfield = new Airfield(world, scene);
     lap('buildings');
@@ -68,6 +74,7 @@ export class Game {
 
     this.physics = new Physics(world);
     this.physics.addBoxes(buildings.colliders);
+    this.physics.addBoxes(shopPlan.colliders);
     this.physics.addBoxes(landmarks.colliders);
     this.physics.addBoxes(airfield.colliders);
     for (const b of roads.bridgeColliders) this.physics.addTrimesh(b.vertices, b.indices);
@@ -139,7 +146,10 @@ export class Game {
   async warmup(): Promise<void> {
     const r = this.renderer;
     const p = this.player;
-    await p.car.loadModel(`${import.meta.env.BASE_URL}models/fiat-uno-5-door.glb`);
+    await Promise.all([
+      p.car.loadModel(`${import.meta.env.BASE_URL}models/fiat-uno-5-door.glb`),
+      this.shops.load(import.meta.env.BASE_URL),
+    ]);
     p.car.render(1);
     p.plane.render(1, 0);
     this.cameraRig.update(1 / 60, p.position, p.flying ? p.plane.forward() : p.car.forward(), 0, this.input.read());

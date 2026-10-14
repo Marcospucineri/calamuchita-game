@@ -243,6 +243,15 @@ body.touch .mini-wrap { transform: scale(0.62); transform-origin: top right; rig
 @media (max-height: 560px) { .bigmap-body canvas { max-height: calc(94vh - 110px); } }
 
 /* ---------- elegir vehículo / vuelo ---------- */
+.paint-choice { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 4px 0 8px; font: 800 12px var(--body); color: var(--ink-soft); }
+.paint-choice span { margin-right: 4px; }
+.paint-choice button {
+  width: 32px; height: 32px; padding: 0; border-radius: 50%; cursor: pointer; background: var(--sw);
+  border: 2px solid rgba(107,84,64,0.35); box-shadow: inset 0 -4px 0 rgba(0,0,0,0.16);
+}
+.paint-choice button[aria-checked="true"] { outline: 3px solid var(--accent); outline-offset: 2px; }
+.paint-choice button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+@media (max-height: 560px) { .paint-choice { margin: 2px 0 4px; } .paint-choice button { width: 28px; height: 28px; } }
 .vehicle-choice, .vehicle-switch { display: flex; gap: 5px; }
 .vehicle-choice { justify-content: center; margin: 15px 0 7px; }
 .vehicle-choice button, .vehicle-switch button {

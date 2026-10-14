@@ -4,12 +4,14 @@ import { Game } from './core/Game';
 import { Physics } from './engine/Physics';
 import { TouchControls } from './engine/TouchControls';
 import { SaveSystem } from './gameplay/SaveSystem';
+import { CAR_PAINTS, CarPaint } from './player/Vehicle';
 import { WorldData } from './world/WorldData';
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const ui = document.getElementById('ui') as HTMLElement;
 
 const QKEY = 'calamuchita.quality';
+const PKEY = 'calamuchita.carPaint';
 const params = new URLSearchParams(location.search);
 const save = SaveSystem.load();
 let vehicle: 'car' | 'plane' = params.get('vehicle') === 'plane' ? 'plane' : params.get('vehicle') === 'car' ? 'car' : save?.vehicle ?? 'car';
@@ -17,6 +19,11 @@ let quality: QualityLevel = TouchControls.isTouch() ? 'baja' : 'media';
 try {
   const q = localStorage.getItem(QKEY) as QualityLevel | null;
   if (q === 'baja' || q === 'media' || q === 'alta') quality = q;
+} catch { /* sin almacenamiento */ }
+let paint: CarPaint = 'gris';
+try {
+  const v = localStorage.getItem(PKEY);
+  if (CAR_PAINTS.some((p) => p.id === v)) paint = v as CarPaint;
 } catch { /* sin almacenamiento */ }
 
 const title = document.createElement('div');
@@ -31,6 +38,10 @@ title.innerHTML = `
       <button data-vehicle="car" aria-pressed="true" disabled>Auto</button>
       <button data-vehicle="plane" aria-pressed="false" disabled>Avioneta</button>
     </div>
+    <div class="paint-choice" role="radiogroup" aria-label="Color del Fiat">
+      <span>Color del Fiat</span>
+      ${CAR_PAINTS.map((p) => `<button role="radio" data-paint="${p.id}" aria-checked="false" aria-label="${p.label}" title="${p.label}" style="--sw:${p.swatch}"></button>`).join('')}
+    </div>
     <div class="departure-note">La avioneta siempre sale del Aeroclub de Villa General Belgrano.</div>
     <div class="bar"><i></i></div>
     <div class="load-label">Preparando el valle…</div>
@@ -41,7 +52,7 @@ title.innerHTML = `
     <div class="quality">Calidad:
       <button disabled data-q="baja">Baja</button><button disabled data-q="media">Media</button><button disabled data-q="alta">Alta</button>
     </div>
-    <div class="credits">Geografía real: © colaboradores de OpenStreetMap · Relieve: Terrarium / AWS Open Data<br>Fiat Uno 3D: <a href="https://sketchfab.com/3d-models/psx-fiat-uno-5-door-7340fb8b784b4e799f40b2bd62b9afa1" target="_blank" rel="noopener noreferrer">Elite engineer</a> · CC BY 4.0</div>
+    <div class="credits">Geografía real: © colaboradores de OpenStreetMap · Relieve: Terrarium / AWS Open Data<br>Fiat Uno 3D: <a href="https://sketchfab.com/3d-models/psx-fiat-uno-5-door-7340fb8b784b4e799f40b2bd62b9afa1" target="_blank" rel="noopener noreferrer">Elite engineer</a> · CC BY 4.0 · Deck y locales de Las Magnolias: <a href="https://www.instagram.com/antooaleman/" target="_blank" rel="noopener noreferrer">@antooaleman</a></div>
   </div>`;
 document.body.appendChild(title);
 const bar = title.querySelector('.bar i') as HTMLElement;
@@ -58,7 +69,30 @@ qButtons.forEach((b) => b.addEventListener('click', () => {
   markQ();
 }));
 
-const markVehicle = () => vButtons.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.vehicle === vehicle)));
+const paintBox = title.querySelector('.paint-choice') as HTMLElement;
+const pButtons = [...paintBox.querySelectorAll<HTMLButtonElement>('button')];
+const markPaint = () => pButtons.forEach((b) => { const on = b.dataset.paint === paint; b.setAttribute('aria-checked', String(on)); b.tabIndex = on ? 0 : -1; });
+markPaint();
+pButtons.forEach((b, i) => {
+  b.addEventListener('click', () => {
+    paint = b.dataset.paint as CarPaint;
+    try { localStorage.setItem(PKEY, paint); } catch { /* nada */ }
+    markPaint();
+  });
+  // flechas para moverse entre colores (grupo de opciones)
+  b.addEventListener('keydown', (e) => {
+    const d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+    if (!d) return;
+    e.preventDefault();
+    const nb = pButtons[(i + d + pButtons.length) % pButtons.length];
+    nb.click();
+    nb.focus();
+  });
+});
+const markVehicle = () => {
+  vButtons.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.vehicle === vehicle)));
+  paintBox.classList.toggle('hidden', vehicle !== 'car');
+};
 markVehicle();
 
 async function boot(): Promise<void> {
@@ -93,6 +127,7 @@ async function boot(): Promise<void> {
         try {
           if (fresh) SaveSystem.clear();
           const game = new Game(world, canvas, ui, quality, fresh ? null : save, vehicle);
+          game.player.car.setPaint(paint);
           label.textContent = 'Pintando el valle…';
           await game.warmup();
           game.start();
