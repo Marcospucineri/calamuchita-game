@@ -26,6 +26,12 @@ import { Vegetation } from '../world/Vegetation';
 import { WorldData } from '../world/WorldData';
 import { Airfield, getAirfield, prepareAirfield } from '../world/Airfield';
 
+/** Modo debug (se carga aparte con ?debug): en modo dios mueve la cámara libre y congela el juego. */
+export interface GameDebug {
+  god: boolean;
+  update(dt: number, state: InputState): void;
+}
+
 export class Game {
   readonly renderer: Renderer;
   readonly physics: Physics;
@@ -45,6 +51,7 @@ export class Game {
   private time = 0;
   private saveTimer = 0;
   private miniZoom = 1;
+  debug: GameDebug | null = null;
 
   constructor(readonly world: WorldData, canvas: HTMLCanvasElement, uiRoot: HTMLElement, quality: QualityLevel, save: SaveData | null, vehicle: VehicleChoice = save?.vehicle ?? 'car') {
     prepareAirfield(world);
@@ -170,7 +177,7 @@ export class Game {
   }
 
   private fixed(dt: number): void {
-    if (this.hud.isMapOpen) return;
+    if (this.hud.isMapOpen || this.debug?.god) return;
     this.player.fixedUpdate(dt, this.state, this.cameraRig.yaw);
     this.physics.step();
     this.player.postStep();
@@ -183,7 +190,8 @@ export class Game {
     const p = this.player;
     const pos = p.position;
 
-    if (this.state.mapPressed) this.hud.toggleMap(pos.x, -pos.z, this.pois.discovered);
+    const mapAt = this.debug?.god ? this.renderer.camera.position : pos;
+    if (this.state.mapPressed) this.hud.toggleMap(mapAt.x, -mapAt.z, this.pois.discovered);
     if (this.state.cameraPressed) {
       this.cameraRig.cycleView();
       // sin cartel al cambiar de cámara
@@ -193,6 +201,7 @@ export class Game {
       const name = this.music.next();
       bus.emit('toast', { text: `♪ Música: ${name}`, sub: 'N para cambiar' });
     }
+    if (this.debug?.god) { this.godFrame(dt); return; }
     if (!this.hud.isMapOpen) p.handleActions(this.state);
 
     p.car.render(alpha);
@@ -237,6 +246,30 @@ export class Game {
 
     this.saveTimer += dt;
     if (this.saveTimer > 5) { this.saveTimer = 0; this.save(); }
+    this.renderer.render();
+  }
+
+  /** Cuadro en modo dios: la cámara vuela libre; el auto, la avioneta y el resto quedan quietos. */
+  private godFrame(dt: number): void {
+    const cam = this.renderer.camera;
+    if (!this.hud.isMapOpen) this.debug!.update(dt, this.state);
+    const p = this.player;
+    p.car.render(1);
+    p.plane.render(1, 0);
+    p.person.render(1, 0);
+    const ground = new THREE.Vector3(cam.position.x, this.world.heightAt(cam.position.x, -cam.position.z), cam.position.z);
+    const dir = cam.getWorldDirection(new THREE.Vector3());
+    // la sombra y los árboles siguen al punto del suelo que se está mirando (cerca)
+    const look = ground.clone().addScaledVector(dir.setY(0).normalize(), Math.min(120, Math.max(0, cam.position.y - ground.y)));
+    look.y = this.world.heightAt(look.x, -look.z);
+    this.terrain.update(cam.position);
+    this.vegetation.update(look);
+    this.renderer.followShadow(look);
+    this.sky.update(cam.position, this.time);
+    this.hud.update(cam.position.x, -cam.position.z, null, null);
+    this.hud.minimap.draw(cam.position.x, -cam.position.z, Math.atan2(-dir.z, dir.x), null, null, this.pois.discovered, 1.2);
+    this.hud.setPrompt(null);
+    this.audio.update(false, 0, 0, 0, false);
     this.renderer.render();
   }
 

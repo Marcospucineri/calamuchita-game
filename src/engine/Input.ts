@@ -24,6 +24,12 @@ export interface InputState {
   zoom: number;
 }
 
+/** ¿El evento viene de un campo de texto? (al escribir una nota no se maneja ni se abren menús) */
+export function isTyping(e: Event): boolean {
+  const t = e.target as HTMLElement | null;
+  return !!t && (t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName));
+}
+
 export class Input {
   private keys = new Set<string>();
   private pressed = new Set<string>();
@@ -37,6 +43,7 @@ export class Input {
   constructor(el: HTMLElement, uiRoot?: HTMLElement) {
     this.touch = uiRoot && TouchControls.isTouch() ? new TouchControls(uiRoot) : null;
     window.addEventListener('keydown', (e) => {
+      if (isTyping(e)) return;
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
       if (!this.keys.has(e.code)) this.pressed.add(e.code);
       this.keys.add(e.code);

@@ -4,3 +4,9 @@ dist
 tools/raw/*.json
 !tools/raw/README.md
 _to_delete
+.env
+.env.*
+!.env.example
+notes/*.tmp
+*.env
+atlas-credentials.env

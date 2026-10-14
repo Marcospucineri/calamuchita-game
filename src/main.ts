@@ -133,6 +133,8 @@ async function boot(): Promise<void> {
           label.textContent = 'Pintando el valle…';
           await game.warmup();
           game.start();
+          // ?debug: modo dios y anotaciones (se baja aparte; no pesa en el juego normal)
+          if (params.has('debug')) import('./debug/Debug').then((m) => m.installDebug(game)).catch((e) => console.error('No se pudo cargar el modo debug', e));
           title.classList.add('out');
           setTimeout(() => title.remove(), 900);
         } catch (e) {

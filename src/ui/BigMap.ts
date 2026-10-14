@@ -17,6 +17,8 @@ export class BigMapView {
   /** Se llama al tocar un punto (sin arrastrar). */
   onPick: ((x: number, n: number) => void) | null = null;
   pin: { x: number; n: number } | null = null;
+  /** Dibujo extra en coordenadas de pantalla (lo usa el modo debug para las anotaciones). */
+  overlay: ((g: CanvasRenderingContext2D, toScreen: (x: number, n: number) => [number, number], metersPerPx: number) => void) | null = null;
   private s = 1;
   private cx = 0;
   private cy = 0;
@@ -80,6 +82,16 @@ export class BigMapView {
   }
 
   clearPin(): void { this.pin = null; this.request(); }
+
+  redraw(): void { this.request(); }
+
+  /** Centra la vista en un punto del mundo, acercando si hace falta. */
+  centerOn(x: number, n: number, zoom = 6): void {
+    const [bx, by] = this.map.toPx(x, n);
+    this.s = Math.max(this.s, Math.min(MAX_SCALE, this.fitScale() * zoom));
+    this.cx = bx; this.cy = by;
+    this.clamp(); this.request();
+  }
 
   // ---------------------------------------------------------------- vista
 
@@ -294,6 +306,7 @@ export class BigMapView {
       g.beginPath(); g.arc(x, y, 6.5, 0, Math.PI * 2); g.fill(); g.stroke();
       label('Aeroclub de VGB', x, y - 11, '800 12px Nunito, sans-serif', '#2d2016', 'rgba(255,248,230,0.92)', 3.5);
     }
+    this.overlay?.(g, S, MPP / s);
     // vos
     {
       const [x, y] = S(this.player.x, this.player.n);

@@ -12,10 +12,12 @@
     "world": "node tools/build-world.mjs",
     "preview-map": "node tools/preview-map.mjs",
     "test:physics": "node tools/test-physics.mjs",
-    "start": "node server.mjs"
+    "start": "node server.mjs",
+    "notes": "node --env-file-if-exists=.env tools/notes.mjs"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.21.0",
+    "mongodb": "^6.21.0",
     "three": "^0.186.1"
   },
   "devDependencies": {

@@ -4,6 +4,7 @@ import { getAirfield } from '../world/Airfield';
 import { WorldData } from '../world/WorldData';
 import { MapRenderer, Minimap } from './Minimap';
 import { BigMapView } from './BigMap';
+import { isTyping } from '../engine/Input';
 
 const SURFACE_LABEL: Record<string, string> = {
   asphalt: 'asfalto', paving: 'adoquín', compacted: 'compactado', gravel: 'ripio', dirt: 'tierra', grass: 'campo', water: 'agua',
@@ -37,6 +38,10 @@ export class HUD {
   onReturnToAirfield: (() => void) | null = null;
   private mapOpen = false;
   private pick: { x: number; n: number; label: string } | null = null;
+  /** Modo debug: si devuelve true, el toque en el mapa no se usa para viajar. */
+  mapPickHandler: ((x: number, n: number) => boolean) | null = null;
+
+  get mapView(): BigMapView { return this.bigView; }
 
   constructor(private w: WorldData, parent: HTMLElement) {
     this.map = new MapRenderer(w);
@@ -104,7 +109,7 @@ export class HUD {
     q('.mini-wrap').appendChild(this.minimap.el);
     this.postales.querySelector('span:last-child')!.textContent = String(w.pois.length);
 
-    window.addEventListener('keydown', (e) => { if (e.code === 'KeyH') this.help.classList.toggle('hidden'); });
+    window.addEventListener('keydown', (e) => { if (e.code === 'KeyH' && !isTyping(e)) this.help.classList.toggle('hidden'); });
     setTimeout(() => this.help.classList.add('faded'), 14000);
 
     bus.on('poi:discovered', (e) => {
@@ -250,6 +255,7 @@ export class HUD {
     this.bigView = new BigMapView(w, this.map, this.bigCanvas);
     const confirm = this.root.querySelector('.map-confirm') as HTMLElement;
     this.bigView.onPick = (x, n) => {
+      if (this.mapPickHandler?.(x, n)) return;
       if (this.vehicle === 'plane') return;
       const pa = w.meta.playArea;
       if (x < pa.x0 || x > pa.x1 || n < pa.n0 || n > pa.n1) { this.toast('Fuera del área de juego', 'Elegí un punto dentro del valle'); return; }
@@ -276,7 +282,7 @@ export class HUD {
       });
     }
     window.addEventListener('keydown', (e) => {
-      if (!this.mapOpen || e.ctrlKey || e.metaKey) return;
+      if (!this.mapOpen || e.ctrlKey || e.metaKey || isTyping(e)) return;
       if (e.key === '+' || e.key === '=') this.bigView.zoom(1.6);
       else if (e.key === '-' || e.key === '_') this.bigView.zoom(1 / 1.6);
       else if (e.key === 'Enter' && this.pick && !(e.target instanceof HTMLButtonElement)) go();
