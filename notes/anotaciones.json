@@ -1,7 +1,472 @@
 {
   "_info": "Copia de las anotaciones de MongoDB (npm run notes). No editar a mano: marcá con \"node tools/notes.mjs done\".",
-  "syncedAt": "2026-10-15T00:09:56.676Z",
+  "syncedAt": "2026-10-15T00:36:10.465Z",
   "notes": [
+    {
+      "id": "6ad01f6a8d9a16f5d20e5cb9",
+      "kind": "point",
+      "points": [
+        [
+          1736.1,
+          -696.7,
+          986.2
+        ]
+      ],
+      "lonlat": [
+        [
+          -64.5406321,
+          -31.982783
+        ]
+      ],
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -64.5406321,
+          -31.982783
+        ]
+      },
+      "category": "hito",
+      "text": "En el pico aleman hay un cartel que dice \"Pico Alemán\"",
+      "town": null,
+      "camera": {
+        "x": 1729.18,
+        "y": 1013.51,
+        "z": 698.45,
+        "yaw": -0.98,
+        "pitch": -0.92
+      },
+      "status": "abierta",
+      "createdAt": "2026-10-15T00:33:46.485Z",
+      "updatedAt": "2026-10-15T00:33:46.485Z"
+    },
+    {
+      "id": "6ad01f3a8d9a16f5d20e5cb8",
+      "kind": "point",
+      "points": [
+        [
+          1508.1,
+          -550.7,
+          963
+        ]
+      ],
+      "lonlat": [
+        [
+          -64.5430442,
+          -31.9814665
+        ]
+      ],
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -64.5430442,
+          -31.9814665
+        ]
+      },
+      "category": "error",
+      "text": "Aca hay una figura de metal blanca triangular que representa a una virgen, es mas grande que un pino",
+      "town": "Villa General Belgrano",
+      "camera": {
+        "x": 1549.15,
+        "y": 987.66,
+        "z": 559.6,
+        "yaw": 1.38,
+        "pitch": -0.31
+      },
+      "status": "abierta",
+      "createdAt": "2026-10-15T00:32:58.055Z",
+      "updatedAt": "2026-10-15T00:32:58.055Z"
+    },
+    {
+      "id": "6ad01e008d9a16f5d20e5cb7",
+      "kind": "polygon",
+      "points": [
+        [
+          493.2,
+          627.2,
+          758.5
+        ],
+        [
+          469,
+          627.2,
+          757.1
+        ],
+        [
+          467.9,
+          542,
+          757.9
+        ],
+        [
+          508.6,
+          546.6,
+          760
+        ]
+      ],
+      "lonlat": [
+        [
+          -64.5537814,
+          -31.9708436
+        ],
+        [
+          -64.5540381,
+          -31.9708433
+        ],
+        [
+          -64.5540501,
+          -31.971612
+        ],
+        [
+          -64.5536185,
+          -31.9715704
+        ]
+      ],
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -64.5537814,
+              -31.9708436
+            ],
+            [
+              -64.5540381,
+              -31.9708433
+            ],
+            [
+              -64.5540501,
+              -31.971612
+            ],
+            [
+              -64.5536185,
+              -31.9715704
+            ],
+            [
+              -64.5537814,
+              -31.9708436
+            ]
+          ]
+        ]
+      },
+      "category": "error",
+      "text": "Aca hay locales comerciales que dan a la calle comechingones",
+      "town": "Villa General Belgrano",
+      "camera": {
+        "x": 476.25,
+        "y": 807.7,
+        "z": -663.38,
+        "yaw": 3.07,
+        "pitch": -0.72
+      },
+      "status": "abierta",
+      "createdAt": "2026-10-15T00:27:44.805Z",
+      "updatedAt": "2026-10-15T00:27:44.805Z"
+    },
+    {
+      "id": "6ad01de08d9a16f5d20e5cb6",
+      "kind": "point",
+      "points": [
+        [
+          221.2,
+          699.4,
+          747.9
+        ]
+      ],
+      "lonlat": [
+        [
+          -64.5566595,
+          -31.9701926
+        ]
+      ],
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -64.5566595,
+          -31.9701926
+        ]
+      },
+      "category": "error",
+      "text": "La textura de la calle se ve rota",
+      "town": "Villa General Belgrano",
+      "camera": {
+        "x": 190.13,
+        "y": 807.7,
+        "z": -644.86,
+        "yaw": -0.54,
+        "pitch": -0.74
+      },
+      "status": "abierta",
+      "createdAt": "2026-10-15T00:27:12.378Z",
+      "updatedAt": "2026-10-15T00:27:12.378Z"
+    },
+    {
+      "id": "6ad01dc48d9a16f5d20e5cb5",
+      "kind": "polygon",
+      "points": [
+        [
+          21.3,
+          39.4,
+          737.6
+        ],
+        [
+          -0.2,
+          42.2,
+          738
+        ],
+        [
+          -21.5,
+          12.1,
+          738.1
+        ],
+        [
+          -25.8,
+          -13.2,
+          737.9
+        ],
+        [
+          -23.9,
+          -37.1,
+          737.5
+        ],
+        [
+          -13.2,
+          -45.5,
+          737.1
+        ],
+        [
+          -1.1,
+          -45.7,
+          737.2
+        ],
+        [
+          19.9,
+          -19.2,
+          737.7
+        ],
+        [
+          26.2,
+          19.7,
+          737.7
+        ]
+      ],
+      "lonlat": [
+        [
+          -64.5587749,
+          -31.9761445
+        ],
+        [
+          -64.5590024,
+          -31.9761194
+        ],
+        [
+          -64.5592272,
+          -31.9763907
+        ],
+        [
+          -64.5592728,
+          -31.9766193
+        ],
+        [
+          -64.5592528,
+          -31.9768347
+        ],
+        [
+          -64.5591399,
+          -31.97691
+        ],
+        [
+          -64.5590117,
+          -31.9769118
+        ],
+        [
+          -64.5587892,
+          -31.976673
+        ],
+        [
+          -64.5587229,
+          -31.9763223
+        ]
+      ],
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -64.5587749,
+              -31.9761445
+            ],
+            [
+              -64.5590024,
+              -31.9761194
+            ],
+            [
+              -64.5592272,
+              -31.9763907
+            ],
+            [
+              -64.5592728,
+              -31.9766193
+            ],
+            [
+              -64.5592528,
+              -31.9768347
+            ],
+            [
+              -64.5591399,
+              -31.97691
+            ],
+            [
+              -64.5590117,
+              -31.9769118
+            ],
+            [
+              -64.5587892,
+              -31.976673
+            ],
+            [
+              -64.5587229,
+              -31.9763223
+            ],
+            [
+              -64.5587749,
+              -31.9761445
+            ]
+          ]
+        ]
+      },
+      "category": "plaza",
+      "text": "Aca no hay casas, es la plaza principal de VGB, hay arboles y pinos, y bancos y un caminito en el medio y canteros con flores",
+      "town": "Villa General Belgrano",
+      "camera": {
+        "x": -49.01,
+        "y": 807.7,
+        "z": 71.72,
+        "yaw": -0.54,
+        "pitch": -0.74
+      },
+      "status": "abierta",
+      "createdAt": "2026-10-15T00:26:44.497Z",
+      "updatedAt": "2026-10-15T00:26:44.497Z"
+    },
+    {
+      "id": "6ad01d848d9a16f5d20e5cb4",
+      "kind": "polygon",
+      "points": [
+        [
+          224.6,
+          -213.5,
+          724.1
+        ],
+        [
+          7.9,
+          -131.8,
+          734.9
+        ],
+        [
+          -10.2,
+          -169.4,
+          733.4
+        ],
+        [
+          212.6,
+          -264.3,
+          724.8
+        ]
+      ],
+      "lonlat": [
+        [
+          -64.5566241,
+          -31.9784253
+        ],
+        [
+          -64.5589162,
+          -31.9776885
+        ],
+        [
+          -64.5591077,
+          -31.9780276
+        ],
+        [
+          -64.5567511,
+          -31.9788831
+        ]
+      ],
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -64.5566241,
+              -31.9784253
+            ],
+            [
+              -64.5589162,
+              -31.9776885
+            ],
+            [
+              -64.5591077,
+              -31.9780276
+            ],
+            [
+              -64.5567511,
+              -31.9788831
+            ],
+            [
+              -64.5566241,
+              -31.9784253
+            ]
+          ]
+        ]
+      },
+      "category": "edificio",
+      "text": "Aca hay locales comunes intercalados a las casas",
+      "town": "Villa General Belgrano",
+      "camera": {
+        "x": -43.71,
+        "y": 807.7,
+        "z": 137.5,
+        "yaw": -2.05,
+        "pitch": -0.54
+      },
+      "status": "abierta",
+      "createdAt": "2026-10-15T00:25:40.788Z",
+      "updatedAt": "2026-10-15T00:25:40.788Z"
+    },
+    {
+      "id": "6ad01d4b8d9a16f5d20e5cb3",
+      "kind": "point",
+      "points": [
+        [
+          -131.3,
+          -700,
+          725
+        ]
+      ],
+      "lonlat": [
+        [
+          -64.5603896,
+          -31.9828126
+        ]
+      ],
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -64.5603896,
+          -31.9828126
+        ]
+      },
+      "category": "edificio",
+      "text": "Aca hay una pileta municipal",
+      "town": "Villa General Belgrano",
+      "camera": {
+        "x": -128.95,
+        "y": 807.7,
+        "z": 669.85,
+        "yaw": 2.88,
+        "pitch": -1.12
+      },
+      "status": "abierta",
+      "createdAt": "2026-10-15T00:24:43.966Z",
+      "updatedAt": "2026-10-15T00:24:43.966Z"
+    },
     {
       "id": "6ad015bf4c4045906f7073f6",
       "kind": "polygon",
@@ -72,8 +537,8 @@
           ]
         ]
       },
-      "category": "error",
-      "text": "Esta calle es muy arbolada pero no de pinos, sino de arboles comunes, y en el medio del bulevard hay pinos",
+      "category": "vegetacion",
+      "text": "Esta calle es muy arbolada pero no de pinos, sino de arboles comunes, y en el medio del bulevard hay algunos pinos intercalados con arboles, pero no llenes el boulevar de vegetacion",
       "town": "Villa Ciudad Parque",
       "camera": {
         "x": -643.02,
@@ -82,11 +547,11 @@
         "yaw": 0,
         "pitch": -0.62
       },
-      "status": "procesada",
+      "status": "abierta",
       "createdAt": "2026-10-14T23:52:31.072Z",
-      "updatedAt": "2026-10-15T00:09:55.298Z",
-      "processedAt": "2026-10-15T00:08:08.195Z",
-      "resolution": "Boulevard Los Reartes: se separaron las dos calzadas para dejar un cantero central de ~8 m con pasto y una fila de pinos; los pinos de las veredas pasaron a árboles comunes y se agregaron filas de árboles comunes cada 9 m a ambos lados. Las casas que quedaban sobre la calzada se corrieron. (src/world/MapEdits.ts)"
+      "updatedAt": "2026-10-15T00:35:59.355Z",
+      "processedAt": null,
+      "resolution": null
     },
     {
       "id": "6ad0155f4c4045906f7073f5",

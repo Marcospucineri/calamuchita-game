@@ -6,7 +6,12 @@
 
 export interface GridInfo { x0: number; x1: number; n0: number; n1: number; step: number; W: number; H: number; scale: number; file: string }
 
-export interface Landmark { type: 'arcoVGB' | 'arcoVCP' | 'botella' | 'barril' | 'totem' | 'plaza'; name: string; x: number; n: number; y: number; heading?: number; width?: number; r?: number; court?: boolean }
+export interface Landmark {
+  type: 'arcoVGB' | 'arcoVCP' | 'botella' | 'barril' | 'totem' | 'plaza' | 'virgen' | 'cartel' | 'pileta' | 'plazaPoly';
+  name: string; x: number; n: number; y: number; heading?: number; width?: number; r?: number; court?: boolean;
+  /** plazaPoly: contorno [x, n] */
+  poly?: number[][];
+}
 
 export interface Town { id: string; name: string; style: string; x: number; n: number; r: number }
 
@@ -38,6 +43,8 @@ export class WorldData {
   far!: Float32Array;
   trees!: Float32Array;
   roads!: Road[];
+  /** Calles con vereda (las marca MapEdits al cargar). */
+  sidewalks = new Set<Road>();
   rivers!: River[];
   buildings!: Building[];
   pois!: POI[];
@@ -147,6 +154,24 @@ export class WorldData {
           }
       }
     });
+  }
+
+  /** Calles a menos de `r` metros del eje (una entrada por calle, con su distancia). */
+  roadsNear(x: number, n: number, r: number): { road: Road; dist: number }[] {
+    const C = WorldData.CELL, out = new Map<Road, number>();
+    for (let gx = Math.floor((x - r) / C); gx <= Math.floor((x + r) / C); gx++)
+      for (let gn = Math.floor((n - r) / C); gn <= Math.floor((n + r) / C); gn++) {
+        const list = this.roadGrid.get(`${gx},${gn}`);
+        if (!list) continue;
+        for (let q = 0; q < list.length; q += 2) {
+          const road = this.roads[list[q]], k = list[q + 1], p = road.p;
+          const ax = p[k - 3], an = p[k - 2], dx = p[k] - ax, dn = p[k + 1] - an, L2 = dx * dx + dn * dn || 1e-9;
+          const t = Math.max(0, Math.min(1, ((x - ax) * dx + (n - an) * dn) / L2));
+          const d = Math.hypot(x - (ax + t * dx), n - (an + t * dn));
+          if (d < r && d < (out.get(road) ?? Infinity)) out.set(road, d);
+        }
+      }
+    return [...out].map(([road, dist]) => ({ road, dist }));
   }
 
   /** Calle más cercana: devuelve la ruta y la distancia al eje. */

@@ -173,6 +173,10 @@ export class Landmarks {
         case 'botella': this.botella(g, l); break;
         case 'barril': this.barril(g, l); break;
         case 'totem': this.totem(g, l); break;
+        case 'cartel': this.woodSign(g, l, l.name.toUpperCase(), 3.6); break;
+        case 'virgen': this.virgen(g, l); break;
+        case 'pileta': this.pileta(g, l); break;
+        case 'plazaPoly': this.plazaPoly(l); continue;
         case 'plaza': this.plaza(l); continue;
       }
       g.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
@@ -445,40 +449,251 @@ export class Landmarks {
   private totem(g: THREE.Group, l: Landmark): void {
     const nr = this.w.nearestRoad(l.x, l.n);
     if (nr) { l.heading = Math.atan2(nr.dirN, nr.dirX); g.rotation.y = l.heading; }
+    this.woodSign(g, l, 'OKTOBERFEST', 4.9);
+  }
+
+  /** Cartel de madera tallada sobre dos troncos, con techito a dos aguas (Oktoberfest, Pico Alemán). */
+  private woodSign(g: THREE.Group, l: Landmark, text: string, width: number): void {
     const log = paintedMaterial({ color: 0x7a5434, brushScale: 1.4 });
     const dark = paintedMaterial({ color: 0x4a2e1b, brushScale: 1.4 });
-    // troncos
-    for (const x of [-2.35, 2.35]) {
+    const px = width / 2 - 0.1;
+    for (const x of [-px, px]) {
       const post = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.21, 3.9, 8), log);
       post.position.set(x, 1.95, 0);
       g.add(post);
       this.collider(l, x, 1.95, 0, 0.22, 1.95, 0.22);
     }
-    // tabla con el texto tallado de los dos lados
-    const face = paintedMaterial({ map: oktoberfestTexture(), brushScale: 0.8, brushAmount: 0.06 });
-    const board = new THREE.Mesh(new THREE.BoxGeometry(4.9, 1.15, 0.16), [dark, dark, dark, dark, face, face]);
+    const face = paintedMaterial({ map: carvedTexture(text), brushScale: 0.8, brushAmount: 0.06 });
+    const board = new THREE.Mesh(new THREE.BoxGeometry(width, 1.15, 0.16), [dark, dark, dark, dark, face, face]);
     board.position.set(0, 2.75, 0);
     g.add(board);
-    // travesaño inferior y ménsulas
-    const beam = new THREE.Mesh(new THREE.BoxGeometry(4.9, 0.14, 0.2), dark);
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(width, 0.14, 0.2), dark);
     beam.position.set(0, 2.1, 0);
     g.add(beam);
-    // techito a dos aguas de tejuela
     for (const sd of [-1, 1]) {
-      const slab = new THREE.Mesh(new THREE.BoxGeometry(5.6, 0.08, 0.62), this.tile);
+      const slab = new THREE.Mesh(new THREE.BoxGeometry(width + 0.7, 0.08, 0.62), this.tile);
       slab.position.set(0, 3.62, sd * 0.24);
       slab.rotation.x = sd * 0.62;
       g.add(slab);
     }
-    const ridge = new THREE.Mesh(new THREE.BoxGeometry(5.7, 0.1, 0.1), dark);
+    const ridge = new THREE.Mesh(new THREE.BoxGeometry(width + 0.8, 0.1, 0.1), dark);
     ridge.position.set(0, 3.82, 0);
     g.add(ridge);
-    // piedras en la base de los troncos
-    for (const x of [-2.35, 2.35]) {
+    for (const x of [-px, px]) {
       const rocks = new THREE.Mesh(new THREE.DodecahedronGeometry(0.5, 0), this.stone);
       rocks.scale.set(1.1, 0.4, 1.1);
       rocks.position.set(x, 0.05, 0);
       g.add(rocks);
+    }
+  }
+
+  /**
+   * Virgen del Cerro La Virgen (nota 6ad01f3a…): figura de chapa blanca, un manto triangular
+   * de dos paños en V con el cuerpo al frente y la corona de rayos, sobre un pircado de piedras.
+   * Más alta que un pino (~13 m).
+   */
+  private virgen(g: THREE.Group, l: Landmark): void {
+    // piedras
+    const rocks: [number, number, number, number][] = [[0, 0.6, 0, 1.9], [1.5, 0.5, 0.8, 1.3], [-1.4, 0.5, 0.9, 1.4], [0.9, 0.5, -1.4, 1.3], [-1.1, 0.5, -1.2, 1.2], [0.2, 1.6, 0.2, 1.4], [1.8, 0.3, -0.3, 1], [-1.9, 0.3, -0.2, 1.1]];
+    for (const [x, y, z, r] of rocks) {
+      const m = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0), this.stone);
+      m.position.set(x, y, z);
+      m.rotation.set(x, z, y);
+      g.add(m);
+    }
+    this.collider(l, 0, 1.2, 0, 2.2, 1.2, 2.2);
+    const white = paintedMaterial({ color: 0xf7f5ef, brushScale: 0.6, brushAmount: 0.06, rim: 0.2, side: THREE.DoubleSide });
+    const base = 2.6, top = 18.5, wing = 4.6;
+    // dos paños del manto: triángulos con lados apenas curvos, abiertos en V hacia el frente
+    for (const sd of [-1, 1]) {
+      const sh = new THREE.Shape();
+      sh.moveTo(0, top - 1.2);
+      sh.quadraticCurveTo(sd * wing * 0.42, base + 4.5, sd * wing, base + 0.6);
+      sh.lineTo(sd * wing * 0.92, base);
+      sh.lineTo(0, base);
+      sh.lineTo(0, top - 1.2);
+      const geo = new THREE.ExtrudeGeometry(sh, { depth: 0.1, bevelEnabled: false });
+      geo.translate(0, 0, -0.05);
+      const m = new THREE.Mesh(geo, white);
+      m.rotation.y = sd * 0.55;
+      m.position.z = -0.25;
+      g.add(m);
+    }
+    // cuerpo al frente: prisma angosto que se afina hacia arriba
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.8, top - base - 0.6, 4), white);
+    body.rotation.y = Math.PI / 4;
+    body.position.set(0, base + (top - base - 0.6) / 2, 0.35);
+    g.add(body);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.34, 10, 8), white);
+    head.position.set(0, top + 0.05, 0.25);
+    g.add(head);
+    // corona de rayos de hierro
+    const iron = paintedMaterial({ color: 0x2f2f33, brushAmount: 0.05 });
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.035, 5, 16), iron);
+    ring.rotation.x = Math.PI / 2;
+    ring.position.set(0, top + 0.42, 0.25);
+    g.add(ring);
+    for (let k = 0; k < 12; k++) {
+      const a = (k / 12) * Math.PI * 2;
+      const ray = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.75, 4), iron);
+      ray.position.set(Math.cos(a) * 0.48, top + 0.75, 0.25 + Math.sin(a) * 0.48);
+      ray.rotation.set(Math.sin(a) * 0.45, 0, -Math.cos(a) * 0.45);
+      g.add(ray);
+      const tip = new THREE.Mesh(new THREE.SphereGeometry(0.05, 5, 4), iron);
+      tip.position.set(Math.cos(a) * 0.62, top + 1.1, 0.25 + Math.sin(a) * 0.62);
+      g.add(tip);
+    }
+    // placa al pie
+    const plaque = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 0.06), paintedMaterial({ color: 0xe8e4da }));
+    plaque.position.set(0, base + 0.5, 0.75);
+    g.add(plaque);
+    this.collider(l, 0, (base + top) / 2, 0, 0.9, (top - base) / 2, 0.9);
+  }
+
+  /** Pileta municipal (nota 6ad01d4b…): solado, pileta de 25 m con andariveles, pelopincho, vestuarios, cerco verde. */
+  private pileta(g: THREE.Group, l: Landmark): void {
+    const W = 38, D = 26;
+    const c = Math.cos(l.heading ?? 0), s = Math.sin(l.heading ?? 0);
+    let hmin = Infinity, hmax = -Infinity;
+    for (const a of [-W / 2, W / 2]) for (const b of [-D / 2, D / 2]) {
+      const h = this.w.heightAt(l.x + a * c - b * s, l.n + a * s + b * c);
+      hmin = Math.min(hmin, h); hmax = Math.max(hmax, h);
+    }
+    const y0 = this.w.heightAt(l.x, l.n);
+    const topY = hmax - y0 + 0.12, thick = hmax - hmin + 1.2;
+    const concrete = paintedMaterial({ color: 0xe4ded1, brushScale: 0.6, brushAmount: 0.07 });
+    const slab = new THREE.Mesh(new THREE.BoxGeometry(W, thick, D), concrete);
+    slab.position.set(0, topY - thick / 2, 0);
+    g.add(slab);
+    const water = paintedMaterial({ color: 0x3aa3cf, brushScale: 0.6, brushAmount: 0.06, rim: 0.3 });
+    const pool = new THREE.Mesh(new THREE.BoxGeometry(25, 0.1, 12.5), water);
+    pool.position.set(-3, topY + 0.01, -2);
+    g.add(pool);
+    const lane = paintedMaterial({ color: 0x1d5f86, brushAmount: 0.04 });
+    for (let k = 1; k < 6; k++) {
+      const ln = new THREE.Mesh(new THREE.BoxGeometry(24, 0.02, 0.18), lane);
+      ln.position.set(-3, topY + 0.065, -2 - 6.25 + (k * 12.5) / 6);
+      g.add(ln);
+    }
+    const kids = new THREE.Mesh(new THREE.BoxGeometry(7, 0.1, 5), water);
+    kids.position.set(13, topY + 0.01, 7.5);
+    g.add(kids);
+    // vestuarios
+    const wall = paintedMaterial({ color: 0xf2ece0, brushScale: 0.6 });
+    const house = new THREE.Mesh(new THREE.BoxGeometry(10, 3, 5), wall);
+    house.position.set(-9, topY + 1.5, 9.5);
+    g.add(house);
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(10.8, 0.25, 5.8), this.tile);
+    roof.position.set(-9, topY + 3.1, 9.5);
+    g.add(roof);
+    this.collider(l, -9, y0 + topY + 1.5 - this.w.heightAt(l.x, l.n), 9.5, 5, 1.5, 2.5);
+    // sombrillas
+    const pole = paintedMaterial({ color: 0xf2f2ee });
+    const cloth = [0xd9472f, 0x2f7fb8, 0xe0a52c].map((color) => paintedMaterial({ color, side: THREE.DoubleSide }));
+    [[8, -9], [12, -9], [16, -9]].forEach(([x, z], i) => {
+      const st = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.3, 5), pole);
+      st.position.set(x, topY + 1.15, z);
+      const top = new THREE.Mesh(new THREE.ConeGeometry(1.4, 0.6, 8, 1, true), cloth[i]);
+      top.position.set(x, topY + 2.4, z);
+      g.add(st, top);
+    });
+    // cerco verde alrededor (con entrada)
+    const hedge = paintedMaterial({ color: 0x4f7f3a, brushScale: 0.9, brushAmount: 0.2 });
+    const seg = (x: number, z: number, w: number, d: number) => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, 1.4, d), hedge);
+      m.position.set(x, topY + 0.6, z);
+      g.add(m);
+      this.collider(l, x, topY + 0.6, z, w / 2, 0.7, d / 2);
+    };
+    seg(0, -D / 2, W, 0.6);
+    seg(-W / 2, 0, 0.6, D);
+    seg(W / 2, 0, 0.6, D);
+    seg(-W / 4 - 2.5, D / 2, W / 2 - 5, 0.6);
+    seg(W / 4 + 2.5, D / 2, W / 2 - 5, 0.6);
+    // cartel
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 0.9), paintedMaterial({ map: signBoard(l.name), brushAmount: 0.05, side: THREE.DoubleSide }));
+    sign.position.set(0, topY + 2.6, D / 2 + 0.4);
+    g.add(sign);
+    for (const x of [-1.5, 1.5]) {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.6, 5), this.dark);
+      post.position.set(x, topY + 1.3, D / 2 + 0.38);
+      g.add(post);
+    }
+  }
+
+  /**
+   * Plaza principal de VGB (nota 6ad01dc4…): contorno real marcado, un caminito por el medio,
+   * canteros con flores, bancos y faroles (los árboles y el pasto los pone MapEdits).
+   */
+  private plazaPoly(l: Landmark): void {
+    const poly = l.poly ?? [];
+    if (poly.length < 3) return;
+    // eje más largo del contorno: el caminito lo recorre de punta a punta
+    let a = poly[0], b = poly[1], best = 0;
+    for (const p of poly) for (const q of poly) { const d = Math.hypot(p[0] - q[0], p[1] - q[1]); if (d > best) { best = d; a = p; b = q; } }
+    const cx = l.x, cn = l.n;
+    const ux = (b[0] - a[0]) / best, un = (b[1] - a[1]) / best;
+    const half = best / 2 - 1;
+    const H = (x: number, n: number) => this.w.heightAt(x, n) + 0.08;
+    const pos: number[] = [], idx: number[] = [];
+    const strip = (x0: number, n0: number, dx: number, dn: number, len: number, wdt: number) => {
+      const ox = -dn * wdt / 2, on = dx * wdt / 2, base = pos.length / 3, steps = Math.ceil(len / 3);
+      for (let k = 0; k <= steps; k++) {
+        const d = (len * k) / steps - len / 2, x = x0 + dx * d, n = n0 + dn * d;
+        pos.push(x + ox, H(x + ox, n + on), -(n + on), x - ox, H(x - ox, n - on), -(n - on));
+        if (k) { const q = base + (k - 1) * 2; idx.push(q, q + 2, q + 1, q + 1, q + 2, q + 3); }
+      }
+    };
+    strip(cx, cn, ux, un, half * 2, 2.8);
+    strip(cx, cn, -un, ux, 9, 2.2); // cruce corto en el centro
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setIndex(idx);
+    geo.computeVertexNormals();
+    const path = new THREE.Mesh(geo, paintedMaterial({ color: 0xcdb48c, brushScale: 0.4, brushAmount: 0.22, polygonOffset: 2, side: THREE.DoubleSide }));
+    path.receiveShadow = true;
+    this.group.add(path);
+    const place = (obj: THREE.Object3D, x: number, n: number, rotY: number) => {
+      obj.position.set(x, this.w.heightAt(x, n), -n);
+      obj.rotation.y = rotY;
+      obj.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+      this.group.add(obj);
+    };
+    const rotPath = Math.atan2(un, ux);
+    // canteros con flores a los costados del centro y a lo largo del caminito
+    const brick = paintedMaterial({ color: 0xa9603e, brushScale: 0.8 });
+    const soil = paintedMaterial({ color: 0x5a3d26, brushScale: 0.8 });
+    const flowerMats = [0xd8343a, 0xf0c02c, 0xe46ba8, 0x8b5bd1, 0xf3f0e8].map((color) => paintedMaterial({ color, brushAmount: 0.05 }));
+    const flowerGeo = new THREE.SphereGeometry(0.16, 5, 4);
+    let fseed = 7;
+    const fr = () => ((fseed = (fseed * 16807) % 2147483647) / 2147483647);
+    const beds: [number, number][] = [];
+    for (const d of [-14, -5, 5, 14]) for (const sd of [-1, 1]) beds.push([cx + ux * d - un * sd * 3.6, cn + un * d + ux * sd * 3.6]);
+    for (const [bx, bn] of beds) {
+      const bed = new THREE.Group();
+      bed.add(at(new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.55, 0.35, 14), brick), 0, 0.17, 0));
+      bed.add(at(new THREE.Mesh(new THREE.CylinderGeometry(1.35, 1.35, 0.36, 14), soil), 0, 0.2, 0));
+      for (let k = 0; k < 26; k++) {
+        const r = Math.sqrt(fr()) * 1.2, an = fr() * Math.PI * 2;
+        bed.add(at(new THREE.Mesh(flowerGeo, flowerMats[Math.floor(fr() * flowerMats.length)]), Math.cos(an) * r, 0.45 + fr() * 0.1, Math.sin(an) * r));
+      }
+      place(bed, bx, bn, 0);
+    }
+    // bancos mirando al caminito y faroles
+    for (const d of [-19, -9.5, 9.5, 19]) for (const sd of [-1, 1]) {
+      const bx = cx + ux * d - un * sd * 2.4, bn = cn + un * d + ux * sd * 2.4;
+      const bench = new THREE.Group();
+      bench.add(at(new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.08, 0.45), this.wood), 0, 0.45, 0));
+      bench.add(at(new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.4, 0.06), this.wood), 0, 0.7, -0.2));
+      for (const x of [-0.75, 0.75]) bench.add(at(new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.45, 0.4), this.dark), x, 0.22, 0));
+      // el respaldo (−Z local) queda del lado de afuera
+      place(bench, bx, bn, rotPath + (sd > 0 ? Math.PI : 0));
+    }
+    for (const d of [-22, 0, 22]) for (const sd of [-1, 1]) {
+      const lamp = new THREE.Group();
+      lamp.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 3.4, 6), this.dark), 0, 1.7, 0));
+      lamp.add(at(new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), paintedMaterial({ color: 0xfff3d0, emissive: 0x554422 })), 0, 3.5, 0));
+      place(lamp, cx + ux * d - un * sd * 1.9, cn + un * d + ux * sd * 1.9, 0);
     }
   }
 
@@ -570,7 +785,7 @@ export class Landmarks {
 }
 
 /** Tabla tallada: letras quemadas sobre madera clara con vetas. */
-function oktoberfestTexture(): THREE.CanvasTexture {
+function carvedTexture(text: string): THREE.CanvasTexture {
   const c = document.createElement('canvas');
   c.width = 1024; c.height = 240;
   const g = c.getContext('2d')!;
@@ -591,12 +806,12 @@ function oktoberfestTexture(): THREE.CanvasTexture {
   // letras: sombra del tallado + relleno oscuro
   let size = 140;
   g.font = `900 ${size}px Bitter, Georgia, serif`;
-  while (g.measureText('OKTOBERFEST').width > 900 && size > 60) { size -= 4; g.font = `900 ${size}px Bitter, Georgia, serif`; }
+  while (g.measureText(text).width > 900 && size > 60) { size -= 4; g.font = `900 ${size}px Bitter, Georgia, serif`; }
   g.textAlign = 'center'; g.textBaseline = 'middle';
   g.fillStyle = 'rgba(255,225,180,0.45)';
-  g.fillText('OKTOBERFEST', 514, 128);
+  g.fillText(text, 514, 128);
   g.fillStyle = '#3b2312';
-  g.fillText('OKTOBERFEST', 510, 124);
+  g.fillText(text, 510, 124);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 4;

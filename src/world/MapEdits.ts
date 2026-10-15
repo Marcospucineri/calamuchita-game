@@ -23,6 +23,10 @@ const CHAMPAQUI_CANCHA: P2[] = [[-612.9, 2672.1], [-735.9, 2121.5], [-717.1, 206
 const VILLA_GALICIA: P2[] = [[1126, 6650], [1269, 7098], [1350, 7241], [978, 7347], [827, 7268], [-757, 7754], [-914, 7421], [-286, 7109], [-242, 7031]];
 /** Nota 6ad0144b4c4045906f7073f2: barrio El Cedrón (Villa Ciudad Parque). */
 const EL_CEDRON: P2[] = [[1979, 7588], [2243, 8427], [-490, 9114], [-690, 8962], [-525, 8270]];
+/** Nota 6ad01dc4…: plaza principal de VGB (no hay casas: árboles, pinos, bancos, caminito y canteros). */
+const PLAZA_VGB: P2[] = [[21, 39], [0, 42], [-22, 12], [-26, -13], [-24, -37], [-13, -46], [-1, -46], [20, -19], [26, 20]];
+/** Pedido: veredas en las calles principales de VGB. */
+const VEREDAS = ['Avenida Ojo de Agua', 'Avenida San Martín', 'Avenida Julio Argentino Roca', 'Avenida Las Magnolias', 'Avenida Comechingones'];
 /** Plaza de El Cedrón: OSM way 1182759948 (leisure=park). */
 const PLAZA_CEDRON: P2[] = [[-326.9, 8406.7], [-340.6, 8348.7], [-357.7, 8370.4], [-368, 8390.7], [-374.7, 8410.7], [-375.4, 8419.4]];
 
@@ -250,10 +254,12 @@ export function applyMapEdits(w: WorldData): MapExtras {
         trees.plant(px, pn, 1.0 + R() * 0.45, 1);
       }
     });
-    // pinos en el cantero central
-    for (const m of medians) walk(m, 8, (x, n) => {
-      if (onRoad(w, x, n, 0.8) || trees.occupied(x, n, 3)) return;
-      trees.plant(x, n, 0.85 + R() * 0.35, 0);
+    // cantero central: algunos pinos intercalados con árboles comunes, con huecos (nota reabierta: "no llenes el boulevard")
+    let alt = 0;
+    for (const m of medians) walk(m, 21, (x, n) => {
+      if (R() < 0.3 || onRoad(w, x, n, 0.8) || trees.occupied(x, n, 6)) return;
+      const pine = alt++ % 2 === 0;
+      trees.plant(x, n, pine ? 0.85 + R() * 0.3 : 0.8 + R() * 0.3, pine ? 0 : 1);
     });
   }
 
@@ -350,6 +356,83 @@ export function applyMapEdits(w: WorldData): MapExtras {
         });
       });
     }
+  }
+
+  // ===== Nota 6ad01dc4…: plaza principal de VGB
+  {
+    w.buildings = w.buildings.filter((b) => {
+      const c = Math.cos(b.r), sn = Math.sin(b.r);
+      const pts: P2[] = [[b.x, b.n], ...[[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, d]) => [b.x + c * a * b.w / 2 - sn * d * b.d / 2, b.n + sn * a * b.w / 2 + c * d * b.d / 2] as P2)];
+      return !pts.some(([x, n]) => inPoly(x, n, PLAZA_VGB));
+    });
+    eachCell(w, PLAZA_VGB, (idx) => { w.ground[idx] = GROUND.LAWN; });
+    const [x0, n0, x1, n1] = bbox(PLAZA_VGB);
+    trees.each(x0, n0, x1, n1, (i, x, n) => { if (inPoly(x, n, PLAZA_VGB)) trees.del[i] = 1; });
+    const cx = PLAZA_VGB.reduce((a, p) => a + p[0], 0) / PLAZA_VGB.length, cn = PLAZA_VGB.reduce((a, p) => a + p[1], 0) / PLAZA_VGB.length;
+    // eje del caminito (el mismo que usa Landmarks.plazaPoly)
+    let a = PLAZA_VGB[0], b = PLAZA_VGB[1], best = 0;
+    for (const p of PLAZA_VGB) for (const q of PLAZA_VGB) { const d = Math.hypot(p[0] - q[0], p[1] - q[1]); if (d > best) { best = d; a = p; b = q; } }
+    const ux = (b[0] - a[0]) / best, un = (b[1] - a[1]) / best;
+    const R = rng(2101);
+    let planted = 0;
+    for (let k = 0; k < 400 && planted < 22; k++) {
+      const x = x0 + R() * (x1 - x0), n = n0 + R() * (n1 - n0);
+      if (!inPoly(x, n, PLAZA_VGB) || edgeDist(x, n, PLAZA_VGB) < 2.5) continue;
+      const along = (x - cx) * ux + (n - cn) * un, across = -(x - cx) * un + (n - cn) * ux;
+      if (Math.abs(across) < 6 && Math.abs(along) < best / 2) continue; // caminito, canteros y bancos
+      if (Math.abs(along) < 7 && Math.abs(across) < 8) continue; // cruce central
+      if (trees.occupied(x, n, 6)) continue;
+      trees.plant(x, n, 0.9 + R() * 0.4, R() < 0.45 ? 0 : 1);
+      planted++;
+    }
+    w.meta.landmarks?.push({ type: 'plazaPoly', name: 'Plaza principal', x: cx, n: cn, y: w.heightAt(cx, cn), poly: PLAZA_VGB });
+  }
+
+  // ===== Nota 6ad01f3a…: Virgen del Cerro La Virgen (figura blanca de metal, más alta que un pino)
+  {
+    const x = 1508, n = -551;
+    const dx = 0 - x, dn = 0 - n, L = Math.hypot(dx, dn); // mira hacia el pueblo
+    w.meta.landmarks?.push({ type: 'virgen', name: 'Virgen del Cerro', x, n, y: w.heightAt(x, n), heading: Math.atan2(dx / L, -dn / L) });
+    trees.each(x - 9, n - 9, x + 9, n + 9, (i, tx, tn) => { if (Math.hypot(tx - x, tn - n) < 9) trees.del[i] = 1; });
+  }
+
+  // ===== Nota 6ad01f6a…: cartel "Pico Alemán" en la cumbre
+  {
+    const x = 1736, n = -697, camX = 1729.18, camN = -698.45; // de frente a donde estaba la cámara al marcar
+    const dx = camX - x, dn = camN - n, L = Math.hypot(dx, dn) || 1;
+    w.meta.landmarks?.push({ type: 'cartel', name: 'Pico Alemán', x, n, y: w.heightAt(x, n), heading: Math.atan2(dx / L, -dn / L) });
+    trees.each(x - 6, n - 6, x + 6, n + 6, (i, tx, tn) => { if (Math.hypot(tx - x, tn - n) < 6) trees.del[i] = 1; });
+  }
+
+  // ===== Nota 6ad01d4b…: pileta municipal
+  {
+    let x = -131, n = -700;
+    const nr = w.nearestRoad(x, n);
+    const h = nr ? Math.atan2(nr.dirN, nr.dirX) : 0;
+    // que el cerco quede detrás de la vereda, no pegado al cordón
+    if (nr) {
+      const need = nr.road.width / 2 + 2.4 + 1.5 + 13 - nr.dist;
+      if (need > 0) { const d = Math.hypot(x - nr.px, n - nr.pn) || 1; x += ((x - nr.px) / d) * need; n += ((n - nr.pn) / d) * need; }
+    }
+    const c = Math.cos(h), sn = Math.sin(h), W = 38 / 2 + 3, D = 26 / 2 + 3;
+    const inside = (px: number, pn: number) => { const dx = px - x, dn = pn - n; return Math.abs(dx * c + dn * sn) < W && Math.abs(-dx * sn + dn * c) < D; };
+    w.buildings = w.buildings.filter((b) => !inside(b.x, b.n));
+    trees.each(x - 30, n - 30, x + 30, n + 30, (i, tx, tn) => { if (inside(tx, tn)) trees.del[i] = 1; });
+    w.meta.landmarks?.push({ type: 'pileta', name: 'Pileta Municipal', x, n, y: w.heightAt(x, n), heading: h });
+  }
+
+  // ===== Pedido: veredas en San Martín, Roca, Ojo de Agua, Las Magnolias y Comechingones (VGB)
+  {
+    const vgb = w.meta.towns.find((t) => t.id === 'vgb');
+    for (const r of w.roads) {
+      if (!VEREDAS.includes(r.name) || r.bridge) continue;
+      if (vgb && Math.hypot(r.p[0] - vgb.x, r.p[1] - vgb.n) > vgb.r) continue;
+      w.sidewalks.add(r);
+    }
+    const lines = [...w.sidewalks].map((r) => polyline(r.p));
+    const idx = new SegIndex(lines, 8);
+    const [x0, n0, x1, n1] = bbox(lines.flat());
+    trees.each(x0 - 8, n0 - 8, x1 + 8, n1 + 8, (i, x, n) => { if (idx.dist(x, n) < 3.75 + 2.8) trees.del[i] = 1; });
   }
 
   w.trees = trees.build();

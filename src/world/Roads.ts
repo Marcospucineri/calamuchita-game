@@ -36,6 +36,7 @@ export class Roads {
       return b;
     };
 
+    this.densify();
     const bridgeParts: Builder = { pos: [], uv: [], idx: [] };
     const railParts: Builder = { pos: [], uv: [], idx: [] };
 
@@ -56,6 +57,8 @@ export class Roads {
       }
     }
 
+    this.buildJoints(get);
+
     for (const [k, b] of builders) {
       if (!b.idx.length) continue;
       const m = k.split('|')[1] as MatKey;
@@ -74,8 +77,87 @@ export class Roads {
       this.group.add(rail);
     }
     this.buildMarkings();
+    this.buildSidewalks();
     this.buildWater();
     scene.add(this.group);
+  }
+
+  /**
+   * Entre dos vértices la cinta es recta; si el terreno se abomba más que el despegue de la cinta,
+   * el pasto asomaba por encima del asfalto. En esos tramos (y solo en esos) se agregan vértices cada 2 m.
+   */
+  private densify(): void {
+    let changed = false;
+    for (const r of this.w.roads) {
+      if (r.bridge) continue;
+      const p = r.p, lift = r.major ? 0.1 : 0.06, out: number[] = [p[0], p[1], p[2]];
+      for (let k = 3; k < p.length; k += 3) {
+        const ax = p[k - 3], an = p[k - 2], ay = p[k - 1], bx = p[k], bn = p[k + 1], by = p[k + 2];
+        const L = Math.hypot(bx - ax, bn - an), steps = Math.floor(L / 2);
+        if (steps >= 2) {
+          const ha = this.w.heightAt(ax, an), hb = this.w.heightAt(bx, bn);
+          let bump = 0;
+          for (let q = 1; q < steps; q++) { const t = q / steps; bump = Math.max(bump, this.w.heightAt(ax + (bx - ax) * t, an + (bn - an) * t) - (ha + (hb - ha) * t)); }
+          if (bump > lift * 0.6) {
+            for (let q = 1; q < steps; q++) { const t = q / steps; out.push(ax + (bx - ax) * t, an + (bn - an) * t, ay + (by - ay) * t); }
+            changed = true;
+          }
+        }
+        out.push(bx, bn, by);
+      }
+      if (out.length !== p.length) r.p = out;
+    }
+    if (changed) this.w.indexRoads();
+  }
+
+  // ---------------------------------------------------------------- cruces
+  private static RANK: Record<MatKey, number> = { asphalt: 5, paving: 4, compacted: 3, gravel: 2, dirt: 1 };
+
+  /**
+   * Placas en cruces y curvas cerradas: donde dos cintas se juntan en ángulo quedaban huecos
+   * por los que se veía el terreno ("textura rota"). Un disco de la superficie más noble que llega
+   * al cruce, apenas por encima de las cintas, tapa la unión. Igual en los quiebres fuertes de una calle.
+   */
+  private buildJoints(get: (tile: string, m: MatKey) => Builder): void {
+    const disc = (x: number, n: number, r: number, m: MatKey, lift: number) => {
+      const b = get(`${Math.floor(x / TILE)},${Math.floor(n / TILE)}`, m);
+      const base = b.pos.length / 3, seg = 18;
+      b.pos.push(x, this.w.heightAt(x, n) + lift, -n);
+      b.uv.push(0.5, 0.5);
+      for (let k = 0; k <= seg; k++) {
+        const a = (k / seg) * Math.PI * 2, px = x + Math.cos(a) * r, pn = n + Math.sin(a) * r;
+        b.pos.push(px, this.w.heightAt(px, pn) + lift, -pn);
+        b.uv.push(0.5 + Math.cos(a) * r / 8, 0.5 + Math.sin(a) * r / 8);
+        if (k) b.idx.push(base, base + k + 1, base + k);
+      }
+    };
+    for (const j of this.w.junctions) {
+      const near = this.w.roadsNear(j[0], j[1], 3).filter((q) => !q.road.bridge);
+      if (near.length < 2) continue;
+      let best = near[0].road, wmax = 0;
+      for (const q of near) {
+        if (Roads.RANK[q.road.surface] > Roads.RANK[best.surface]) best = q.road;
+        wmax = Math.max(wmax, q.road.width);
+      }
+      disc(j[0], j[1], wmax / 2 + 0.35, best.surface, (best.major ? 0.1 : 0.06) + 0.012);
+    }
+    // quiebres fuertes dentro de una misma calle (el inglete no alcanza a cubrir la esquina de afuera)
+    for (const r of this.w.roads) {
+      if (r.bridge) continue;
+      const p = r.p, n = p.length / 3;
+      for (let k = 1; k < n - 1; k++) {
+        const ax = p[k * 3] - p[k * 3 - 3], an = p[k * 3 + 1] - p[k * 3 - 2], bx = p[k * 3 + 3] - p[k * 3], bn = p[k * 3 + 4] - p[k * 3 + 1];
+        const la = Math.hypot(ax, an), lb = Math.hypot(bx, bn);
+        if (la < 0.5 || lb < 0.5) continue;
+        if ((ax * bx + an * bn) / (la * lb) < Math.cos(0.6)) disc(p[k * 3], p[k * 3 + 1], r.width / 2, r.surface, (r.major ? 0.1 : 0.06) + 0.006);
+      }
+    }
+  }
+
+  /** ¿El punto cae sobre la calzada de otra calle? (calles divididas, rotondas, cruces) */
+  private onOtherRoad(x: number, n: number, self: Road, margin: number): boolean {
+    for (const q of this.w.roadsNear(x, n, 12)) if (q.road !== self && q.dist < q.road.width / 2 + margin) return true;
+    return false;
   }
 
   // ---------------------------------------------------------------- demarcación
@@ -115,7 +197,8 @@ export class Roads {
       const spans: [number, number][] = [];
       let start = -1;
       for (let i = 0; i < n; i++) {
-        const blocked = this.nearJunction(p[i * 3], p[i * 3 + 1]);
+        // tampoco donde la calzada se superpone con otra (las dos manos de una calle dividida al separarse)
+        const blocked = this.nearJunction(p[i * 3], p[i * 3 + 1]) || this.onOtherRoad(p[i * 3], p[i * 3 + 1], r, 0.4);
         if (!blocked && start < 0) start = i;
         if ((blocked || i === n - 1) && start >= 0) {
           const end = blocked ? i - 1 : i;
@@ -143,6 +226,59 @@ export class Roads {
     };
     mk(yellow, 0xe0ad2c);
     mk(white, 0xeeeadc);
+  }
+
+  // ---------------------------------------------------------------- veredas
+  /**
+   * Veredas de baldosa a ambos lados de las calles principales de VGB (w.sidewalks):
+   * 2,3 m de ancho, un cordón de 12 cm sobre la calzada, cortadas en esquinas y cruces.
+   */
+  private buildSidewalks(): void {
+    const top: Builder = { pos: [], uv: [], idx: [] }, curb: Builder = { pos: [], uv: [], idx: [] };
+    for (const r of this.w.sidewalks) {
+      const p = r.p, n = p.length / 3;
+      if (n < 2 || r.bridge) continue;
+      const half = r.width / 2, lift = r.major ? 0.1 : 0.06;
+      const inner = half + 0.05, outer = half + 2.35, H = lift + 0.12;
+      for (const side of [1, -1]) {
+        let prev: { li: number[]; lo: number[]; ok: boolean; d: number; road: number[] } | null = null;
+        for (let k = 0; k < n; k++) {
+          const x = p[k * 3], nn = p[k * 3 + 1];
+          const kp = Math.max(0, k - 1), kn = Math.min(n - 1, k + 1);
+          let dx = p[kn * 3] - p[kp * 3], dn = p[kn * 3 + 1] - p[kp * 3 + 1];
+          const L = Math.hypot(dx, dn) || 1;
+          dx /= L; dn /= L;
+          const ox = -dn * side, on = dx * side;
+          const ix = x + ox * inner, in_ = nn + on * inner, ex = x + ox * outer, en = nn + on * outer;
+          const mx = (ix + ex) / 2, mn = (in_ + en) / 2;
+          const ok = !this.nearJunction(mx, mn) && !this.onOtherRoad(mx, mn, r, 1.0) && !this.onOtherRoad(ex, en, r, 0.6);
+          const hi = this.w.heightAt(ix, in_), he = this.w.heightAt(ex, en);
+          const cur = { li: [ix, hi + H, -in_], lo: [ex, Math.max(he, hi - 0.3) + H, -en], ok, d: this.distAlong(r, k), road: [ix, hi + lift - 0.02, -in_] };
+          if (prev && prev.ok && cur.ok) {
+            const vb = top.pos.length / 3, v0 = prev.d / 2, v1 = cur.d / 2;
+            top.pos.push(...prev.li, ...prev.lo, ...cur.lo, ...cur.li);
+            top.uv.push(0, v0, 1.0, v0, 1.0, v1, 0, v1);
+            if (side > 0) top.idx.push(vb, vb + 2, vb + 1, vb, vb + 3, vb + 2); else top.idx.push(vb, vb + 1, vb + 2, vb, vb + 2, vb + 3);
+            // cara del cordón
+            const cb = curb.pos.length / 3;
+            curb.pos.push(...prev.road, ...prev.li, ...cur.li, ...cur.road);
+            curb.uv.push(0, 0, 0, 1, 1, 1, 1, 0);
+            curb.idx.push(cb, cb + 1, cb + 2, cb, cb + 2, cb + 3);
+          }
+          prev = cur;
+        }
+      }
+    }
+    if (top.idx.length) {
+      const m = new THREE.Mesh(toGeo(top), paintedMaterial({ map: sidewalkTexture(), brushScale: 0.4, brushAmount: 0.08, polygonOffset: 4, rim: 0, side: THREE.DoubleSide }));
+      m.receiveShadow = true;
+      this.group.add(m);
+    }
+    if (curb.idx.length) {
+      const m = new THREE.Mesh(toGeo(curb), paintedMaterial({ color: 0xcfc9bd, brushScale: 0.6, brushAmount: 0.06, side: THREE.DoubleSide }));
+      m.receiveShadow = true;
+      this.group.add(m);
+    }
   }
 
   /** Franja pintada entre las distancias s0 y s1 del eje, desplazada `off` metros a la izquierda. */
@@ -205,9 +341,16 @@ export class Roads {
         ox *= Math.min(miter, 1.6); on *= Math.min(miter, 1.6);
       }
       const lx = x + ox * half, ln = n + on * half, rx = x - ox * half, rn = n - on * half;
-      const hl = hOverride ? hOverride(k) : followTerrain ? this.w.heightAt(lx, ln) : p[k * 3 + 2];
-      const hr = hOverride ? hOverride(k) : followTerrain ? this.w.heightAt(rx, rn) : p[k * 3 + 2];
-      const hc = hOverride ? hOverride(k) : followTerrain ? this.w.heightAt(x, n) : p[k * 3 + 2];
+      let hl = hOverride ? hOverride(k) : followTerrain ? this.w.heightAt(lx, ln) : p[k * 3 + 2];
+      let hr = hOverride ? hOverride(k) : followTerrain ? this.w.heightAt(rx, rn) : p[k * 3 + 2];
+      let hc = hOverride ? hOverride(k) : followTerrain ? this.w.heightAt(x, n) : p[k * 3 + 2];
+      if (followTerrain && !hOverride) {
+        // si el terreno se abomba entre el centro y el borde, se levantan ambos lo justo
+        const ql = this.w.heightAt(x + ox * half / 2, n + on * half / 2) - (hl + hc) / 2;
+        const qr = this.w.heightAt(x - ox * half / 2, n - on * half / 2) - (hr + hc) / 2;
+        const up = Math.max(0, ql, qr);
+        if (up > 0) { hc += up; if (ql > 0) hl += ql; if (qr > 0) hr += qr; }
+      }
       const vv = this.distAlong(r, k) / 8;
       // tres columnas (izq, centro, der) para que la cinta siga el bombeo del terreno
       b.pos.push(lx, hl + lift, -ln, x, hc + lift, -n, rx, hr + lift, -rn);
@@ -310,6 +453,30 @@ export class Roads {
     mesh.renderOrder = 2;
     this.group.add(mesh);
   }
+}
+
+/** Baldosas claras de vereda (u: a lo ancho de la vereda, v: cada 2 m a lo largo). */
+let sidewalkTex: THREE.CanvasTexture | null = null;
+function sidewalkTexture(): THREE.CanvasTexture {
+  if (sidewalkTex) return sidewalkTex;
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#ddd5c4';
+  g.fillRect(0, 0, 128, 128);
+  for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
+    const v = 205 + Math.floor(Math.random() * 30);
+    g.fillStyle = `rgb(${v + 12},${v + 6},${v - 8})`;
+    g.fillRect(i * 32 + 1, j * 32 + 1, 30, 30);
+  }
+  g.strokeStyle = 'rgba(120,105,85,0.45)';
+  g.lineWidth = 2;
+  for (let k = 0; k <= 128; k += 32) { g.beginPath(); g.moveTo(k, 0); g.lineTo(k, 128); g.stroke(); g.beginPath(); g.moveTo(0, k); g.lineTo(128, k); g.stroke(); }
+  sidewalkTex = new THREE.CanvasTexture(c);
+  sidewalkTex.colorSpace = THREE.SRGBColorSpace;
+  sidewalkTex.wrapS = sidewalkTex.wrapT = THREE.RepeatWrapping;
+  sidewalkTex.anisotropy = 4;
+  return sidewalkTex;
 }
 
 function toGeo(b: Builder): THREE.BufferGeometry {

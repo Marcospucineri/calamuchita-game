@@ -168,6 +168,68 @@ export function planShops(w: WorldData): ShopPlan {
     }
   }
 
+  // --- VGB: zonas marcadas en notas del modo debug
+  const inPolyS = (x: number, n: number, poly: number[][]) => {
+    let c = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const [xi, ni] = poly[i], [xj, nj] = poly[j];
+      if ((ni > n) !== (nj > n) && x < ((xj - xi) * (n - ni)) / (nj - ni) + xi) c = !c;
+    }
+    return c;
+  };
+  const already = new Set(plan.fronts.map((f) => f.b));
+  // Nota 6ad01e00…: locales comerciales que dan a Av. Comechingones (todas las casas del tramo + terrenos vacíos)
+  {
+    const zone = [[493, 627], [469, 627], [468, 542], [509, 547]];
+    const names = ['Avenida Comechingones'];
+    const segs = corridor(w, names);
+    const zr = rng(4317);
+    const free = new Map<string, number>();
+    walk(w, names, 2, (px, pn, tx, tn, hw, s, id) => {
+      for (const side of [-1, 1]) {
+        const key = `${id}|${side}`;
+        if (s < (free.get(key) ?? 0)) continue;
+        const nx = -tn * side, nn = tx * side;
+        const W = 9 + zr() * 4, D = 8 + zr() * 3;
+        const off = hw + 3 + D / 2;
+        const x = px + tx * (W / 2) + nx * off, n = pn + tn * (W / 2) + nn * off;
+        if (!inPolyS(x, n, zone)) continue;
+        if (lotFree(w, x, n, tx, tn, W, D, near(x, n), [])) {
+          const ys = corners(x, n, tx, tn, W, D).map(([cx, cn]) => w.heightAt(cx, cn));
+          if (Math.max(...ys) - Math.min(...ys) < 2.2) {
+            w.buildings.push({ x, n, r: Math.atan2(tn, tx), w: W, d: D, l: 1, s: 'localA', y: Math.min(...ys), k: 'retail' });
+            clear.push({ x, n, r: Math.hypot(W, D) / 2 + 1.5 });
+            free.set(key, s + W + 2 + zr() * 5);
+            continue;
+          }
+        }
+        free.set(key, s + 3);
+      }
+    });
+    for (const f of facing(segs, names, 12)) {
+      if (already.has(f.b) || !inPolyS(f.b.x, f.b.n, zone)) continue;
+      asLocal(f);
+      plan.fronts.push(f);
+      already.add(f.b);
+    }
+  }
+  // Nota 6ad01d84…: locales comunes intercalados con las casas sobre Av. Ojo de Agua
+  {
+    const zone = [[225, -214], [8, -132], [-10, -169], [213, -264]];
+    const names = ['Avenida Ojo de Agua'];
+    const segs = corridor(w, names);
+    const list = facing(segs, names, 14).filter((f) => !already.has(f.b) && inPolyS(f.b.x, f.b.n, zone));
+    const A = segs[0];
+    if (A) {
+      const dx = segs[segs.length - 1].bx - A.ax, dn = segs[segs.length - 1].bn - A.an;
+      const key = (f: Front) => (f.b.x - A.ax) * dx + (f.b.n - A.an) * dn;
+      for (const side of [-1, 1]) {
+        list.filter((f) => Math.sign((f.b.x - A.ax) * dn - (f.b.n - A.an) * dx) === side).sort((a, b) => key(a) - key(b))
+          .forEach((f, i) => { if (i % 2 === 0) { asLocal(f); plan.fronts.push(f); already.add(f.b); } });
+      }
+    }
+  }
+
   // --- Los Reartes: San Martín desde la capilla hasta la ruta S-271 (completa terrenos vacíos)
   const lrNames = ['Avenida San Martín'];
   const lr = corridor(w, lrNames, [-1603, 6391], [-1824, 5728], 120);
