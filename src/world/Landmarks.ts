@@ -438,25 +438,50 @@ export class Landmarks {
     this.collider(l, 0, 1.3, 0, 1.0, 0.9, 0.9);
   }
 
+  /**
+   * Cartel de madera "OKTOBERFEST" en la plaza (nota 6ad0155f4c4045906f7073f5: antes había un poste de colores).
+   * Tabla tallada sobre dos troncos, con techito a dos aguas, paralela a la calle.
+   */
   private totem(g: THREE.Group, l: Landmark): void {
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.42, 3.6, 9), paintedMaterial({ color: 0x8a7b6a, brushScale: 2 }));
-    trunk.position.y = 1.8;
-    g.add(trunk);
-    const carved = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.34, 1.2, 9), paintedMaterial({ color: 0x5f7fa0, brushScale: 2 }));
-    carved.position.y = 2.6;
-    g.add(carved);
-    for (let k = 0; k < 4; k++) {
-      const flame = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.9, 5), paintedMaterial({ color: k % 2 ? 0xd9784a : 0xe8a37a }));
-      flame.position.set(Math.cos(k * 1.6) * 0.22, 4.0, Math.sin(k * 1.6) * 0.22);
-      flame.rotation.z = Math.cos(k * 1.6) * -0.35;
-      flame.rotation.x = Math.sin(k * 1.6) * 0.35;
-      g.add(flame);
+    const nr = this.w.nearestRoad(l.x, l.n);
+    if (nr) { l.heading = Math.atan2(nr.dirN, nr.dirX); g.rotation.y = l.heading; }
+    const log = paintedMaterial({ color: 0x7a5434, brushScale: 1.4 });
+    const dark = paintedMaterial({ color: 0x4a2e1b, brushScale: 1.4 });
+    // troncos
+    for (const x of [-2.35, 2.35]) {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.21, 3.9, 8), log);
+      post.position.set(x, 1.95, 0);
+      g.add(post);
+      this.collider(l, x, 1.95, 0, 0.22, 1.95, 0.22);
     }
-    const rocks = new THREE.Mesh(new THREE.DodecahedronGeometry(0.8, 0), this.stone);
-    rocks.scale.set(1.2, 0.35, 1.2);
-    g.add(rocks);
-    this.collider(l, 0, 1.8, 0, 0.45, 1.8, 0.45);
+    // tabla con el texto tallado de los dos lados
+    const face = paintedMaterial({ map: oktoberfestTexture(), brushScale: 0.8, brushAmount: 0.06 });
+    const board = new THREE.Mesh(new THREE.BoxGeometry(4.9, 1.15, 0.16), [dark, dark, dark, dark, face, face]);
+    board.position.set(0, 2.75, 0);
+    g.add(board);
+    // travesaño inferior y ménsulas
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(4.9, 0.14, 0.2), dark);
+    beam.position.set(0, 2.1, 0);
+    g.add(beam);
+    // techito a dos aguas de tejuela
+    for (const sd of [-1, 1]) {
+      const slab = new THREE.Mesh(new THREE.BoxGeometry(5.6, 0.08, 0.62), this.tile);
+      slab.position.set(0, 3.62, sd * 0.24);
+      slab.rotation.x = sd * 0.62;
+      g.add(slab);
+    }
+    const ridge = new THREE.Mesh(new THREE.BoxGeometry(5.7, 0.1, 0.1), dark);
+    ridge.position.set(0, 3.82, 0);
+    g.add(ridge);
+    // piedras en la base de los troncos
+    for (const x of [-2.35, 2.35]) {
+      const rocks = new THREE.Mesh(new THREE.DodecahedronGeometry(0.5, 0), this.stone);
+      rocks.scale.set(1.1, 0.4, 1.1);
+      rocks.position.set(x, 0.05, 0);
+      g.add(rocks);
+    }
   }
+
 
   /** Plaza circular: senderos radiales de tierra, bancos, faroles y (en Paseo del Bosque) canchas. */
   private plaza(l: Landmark): void {
@@ -543,3 +568,38 @@ export class Landmarks {
     }
   }
 }
+
+/** Tabla tallada: letras quemadas sobre madera clara con vetas. */
+function oktoberfestTexture(): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = 1024; c.height = 240;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#b58350';
+  g.fillRect(0, 0, 1024, 240);
+  // vetas
+  for (let i = 0; i < 70; i++) {
+    g.strokeStyle = `rgba(${90 + Math.random() * 40},${55 + Math.random() * 25},${25 + Math.random() * 15},${0.18 + Math.random() * 0.2})`;
+    g.lineWidth = 1 + Math.random() * 3;
+    const y = Math.random() * 240;
+    g.beginPath(); g.moveTo(0, y);
+    for (let x = 0; x <= 1024; x += 64) g.lineTo(x, y + Math.sin(x * 0.01 + i) * 6);
+    g.stroke();
+  }
+  // marco tallado
+  g.strokeStyle = '#5a3820'; g.lineWidth = 10; g.strokeRect(14, 14, 996, 212);
+  g.strokeStyle = 'rgba(255,230,190,0.25)'; g.lineWidth = 3; g.strokeRect(24, 24, 976, 192);
+  // letras: sombra del tallado + relleno oscuro
+  let size = 140;
+  g.font = `900 ${size}px Bitter, Georgia, serif`;
+  while (g.measureText('OKTOBERFEST').width > 900 && size > 60) { size -= 4; g.font = `900 ${size}px Bitter, Georgia, serif`; }
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillStyle = 'rgba(255,225,180,0.45)';
+  g.fillText('OKTOBERFEST', 514, 128);
+  g.fillStyle = '#3b2312';
+  g.fillText('OKTOBERFEST', 510, 124);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+

@@ -131,7 +131,7 @@ export function pavingTexture(): THREE.CanvasTexture {
 export function wallTexture(style: string): THREE.CanvasTexture {
   const [c, g] = canvas(256, 192);
   const base = style === 'alpino' ? '#efe3c8' : style === 'criollo' ? '#f1ece2' : style === 'serrano' ? '#a77a4f' : style === 'comun' ? '#e9d2b4'
-    : style === 'localA' ? '#f1e7d0' : style === 'localB' ? '#d9e4de' : style === 'localC' ? '#efcfae' : '#e6dccb';
+    : style === 'localA' ? '#f1e7d0' : style === 'localB' ? '#d9e4de' : style === 'localC' ? '#efcfae' : style === 'premium' ? '#f6f2ea' : '#e6dccb';
   g.fillStyle = base;
   g.fillRect(0, 0, 256, 192);
   // textura de revoque / madera
@@ -160,9 +160,18 @@ export function wallTexture(style: string): THREE.CanvasTexture {
     g.fillStyle = 'rgba(160,140,110,0.35)';
     g.fillRect(0, 172, 256, 20); // zócalo
   }
+  if (style === 'premium') {
+    // zócalo de piedra
+    g.fillStyle = '#9a8f80';
+    g.fillRect(0, 160, 256, 32);
+    for (let i = 0; i < 40; i++) {
+      g.fillStyle = rnd() < 0.5 ? '#b3a898' : '#857a6c';
+      g.fillRect(rnd() * 256, 162 + rnd() * 26, 14 + rnd() * 18, 6 + rnd() * 6);
+    }
+  }
   // ventana con postigos
   const wx = 92, wy = 34, ww = 72, wh = 62;
-  const shutter = style === 'alpino' ? '#2f5a3a' : style === 'criollo' ? '#3c6a7a' : style === 'comun' || style.startsWith('local') ? '#8a8f86' : '#6b3f22';
+  const shutter = style === 'alpino' ? '#2f5a3a' : style === 'criollo' ? '#3c6a7a' : style === 'comun' || style.startsWith('local') ? '#8a8f86' : style === 'premium' ? '#3d3a35' : '#6b3f22';
   g.fillStyle = shutter;
   g.fillRect(wx - 26, wy, 24, wh);
   g.fillRect(wx + ww + 2, wy, 24, wh);

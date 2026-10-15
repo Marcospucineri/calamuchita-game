@@ -15,6 +15,7 @@ import { Vehicle } from '../player/Vehicle';
 import { VehicleAudio } from '../player/VehicleAudio';
 import { Music } from '../engine/Music';
 import { ShopDecor, planShops } from '../world/Shops';
+import { MapExtrasView, applyMapEdits } from '../world/MapEdits';
 import { sharedUniforms } from '../render/PaintedMaterial';
 import { HUD } from '../ui/HUD';
 import { Buildings } from '../world/Buildings';
@@ -55,6 +56,10 @@ export class Game {
 
   constructor(readonly world: WorldData, canvas: HTMLCanvasElement, uiRoot: HTMLElement, quality: QualityLevel, save: SaveData | null, vehicle: VehicleChoice = save?.vehicle ?? 'car') {
     prepareAirfield(world);
+    // correcciones del mapa que salieron de las anotaciones del modo debug
+    const tEdits = performance.now();
+    const mapExtras = applyMapEdits(world);
+    console.info(`[calamuchita] correcciones del mapa: ${(performance.now() - tEdits).toFixed(0)}ms · ${mapExtras.pools.length} piletas · ${mapExtras.flags.length} greens`);
     const q = QUALITY[quality];
     const tStart = performance.now();
     let tLast = tStart;
@@ -73,6 +78,7 @@ export class Game {
     console.info(`[calamuchita] locales: ${shopPlan.fronts.filter((f) => f.kind === 'centro').length} centroeuropeos, ${shopPlan.fronts.filter((f) => f.kind === 'local').length} comunes, ${shopPlan.decks.length} decks, ${shopPlan.magnolias.length} en Las Magnolias`);
     const buildings = new Buildings(world, scene);
     this.shops = new ShopDecor(shopPlan, scene);
+    new MapExtrasView(mapExtras, scene);
     const landmarks = new Landmarks(world, scene);
     const airfield = new Airfield(world, scene);
     lap('buildings');

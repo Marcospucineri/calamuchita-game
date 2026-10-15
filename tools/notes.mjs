@@ -8,6 +8,14 @@
 import fs from 'node:fs';
 import { ALL_FILE, readQueue, syncNotes, writeQueue } from '../server/notes-sync.mjs';
 
+// lee .env aunque no se haya pasado --env-file (así nunca se confunde la base local con MongoDB)
+if (!process.env.MONGODB_URI && fs.existsSync('.env')) {
+  for (const line of fs.readFileSync('.env', 'utf8').split('\n')) {
+    const m = /^\s*([A-Z0-9_]+)\s*=\s*"?(.*?)"?\s*$/.exec(line);
+    if (m && !line.trim().startsWith('#') && process.env[m[1]] === undefined) process.env[m[1]] = m[2];
+  }
+}
+
 const [cmd = 'sync', ...args] = process.argv.slice(2);
 const mongoUri = process.env.MONGODB_URI || undefined;
 

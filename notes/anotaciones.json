@@ -1,5 +1,558 @@
 {
   "_info": "Copia de las anotaciones de MongoDB (npm run notes). No editar a mano: marcá con \"node tools/notes.mjs done\".",
-  "syncedAt": "2026-10-14T23:22:30.039Z",
-  "notes": []
+  "syncedAt": "2026-10-15T00:09:56.676Z",
+  "notes": [
+    {
+      "id": "6ad015bf4c4045906f7073f6",
+      "kind": "polygon",
+      "points": [
+        [
+          -625.3,
+          8061.1,
+          783.9
+        ],
+        [
+          -592.6,
+          8124.7,
+          780.9
+        ],
+        [
+          3371,
+          7024.8,
+          875.3
+        ],
+        [
+          3368.8,
+          6954.8,
+          875.5
+        ]
+      ],
+      "lonlat": [
+        [
+          -64.5656152,
+          -31.9038031
+        ],
+        [
+          -64.5652698,
+          -31.9032294
+        ],
+        [
+          -64.5233342,
+          -31.9131489
+        ],
+        [
+          -64.5233582,
+          -31.9137801
+        ]
+      ],
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -64.5656152,
+              -31.9038031
+            ],
+            [
+              -64.5652698,
+              -31.9032294
+            ],
+            [
+              -64.5233342,
+              -31.9131489
+            ],
+            [
+              -64.5233582,
+              -31.9137801
+            ],
+            [
+              -64.5656152,
+              -31.9038031
+            ]
+          ]
+        ]
+      },
+      "category": "error",
+      "text": "Esta calle es muy arbolada pero no de pinos, sino de arboles comunes, y en el medio del bulevard hay pinos",
+      "town": "Villa Ciudad Parque",
+      "camera": {
+        "x": -643.02,
+        "y": 834.14,
+        "z": -7990.97,
+        "yaw": 0,
+        "pitch": -0.62
+      },
+      "status": "procesada",
+      "createdAt": "2026-10-14T23:52:31.072Z",
+      "updatedAt": "2026-10-15T00:09:55.298Z",
+      "processedAt": "2026-10-15T00:08:08.195Z",
+      "resolution": "Boulevard Los Reartes: se separaron las dos calzadas para dejar un cantero central de ~8 m con pasto y una fila de pinos; los pinos de las veredas pasaron a árboles comunes y se agregaron filas de árboles comunes cada 9 m a ambos lados. Las casas que quedaban sobre la calzada se corrieron. (src/world/MapEdits.ts)"
+    },
+    {
+      "id": "6ad0155f4c4045906f7073f5",
+      "kind": "point",
+      "points": [
+        [
+          -14.4,
+          -46.2,
+          737.2
+        ]
+      ],
+      "lonlat": [
+        [
+          -64.5591525,
+          -31.9769164
+        ]
+      ],
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -64.5591525,
+          -31.9769164
+        ]
+      },
+      "category": "error",
+      "text": "Aca hay como un poste con colores, en verdad hay un cartel que dice Oktoberfest de madera",
+      "town": "Villa General Belgrano",
+      "camera": {
+        "x": -277.94,
+        "y": 841.3,
+        "z": -1349.37,
+        "yaw": -2.45,
+        "pitch": -0.23
+      },
+      "status": "procesada",
+      "createdAt": "2026-10-14T23:50:55.894Z",
+      "updatedAt": "2026-10-15T00:09:56.322Z",
+      "processedAt": "2026-10-15T00:08:08.618Z",
+      "resolution": "Se reemplazó el poste de colores por un cartel de madera tallada OKTOBERFEST sobre dos troncos, con techito a dos aguas y paralelo a la calle. (src/world/Landmarks.ts)"
+    },
+    {
+      "id": "6ad0153f4c4045906f7073f4",
+      "kind": "polygon",
+      "points": [
+        [
+          397.6,
+          2156.4,
+          794.1
+        ],
+        [
+          267.8,
+          2064.1,
+          793
+        ],
+        [
+          -476.9,
+          2214.8,
+          787.5
+        ],
+        [
+          -621.4,
+          2049.9,
+          788.7
+        ],
+        [
+          -734.4,
+          2003.9,
+          795.3
+        ],
+        [
+          -767.3,
+          2236.1,
+          805
+        ],
+        [
+          -741.5,
+          2550.2,
+          799.7
+        ],
+        [
+          -655.8,
+          2670.8,
+          795.9
+        ],
+        [
+          -145.4,
+          2630.8,
+          781.2
+        ],
+        [
+          43.5,
+          2525,
+          788.2
+        ],
+        [
+          143.7,
+          2502.7,
+          796
+        ]
+      ],
+      "lonlat": [
+        [
+          -64.5547934,
+          -31.9570527
+        ],
+        [
+          -64.5561667,
+          -31.9578857
+        ],
+        [
+          -64.5640455,
+          -31.9565261
+        ],
+        [
+          -64.5655745,
+          -31.9580134
+        ],
+        [
+          -64.5667695,
+          -31.9584285
+        ],
+        [
+          -64.5671178,
+          -31.956334
+        ],
+        [
+          -64.5668449,
+          -31.953502
+        ],
+        [
+          -64.565938,
+          -31.9524137
+        ],
+        [
+          -64.5605384,
+          -31.9527744
+        ],
+        [
+          -64.5585397,
+          -31.9537286
+        ],
+        [
+          -64.55748,
+          -31.9539304
+        ]
+      ],
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -64.5547934,
+              -31.9570527
+            ],
+            [
+              -64.5561667,
+              -31.9578857
+            ],
+            [
+              -64.5640455,
+              -31.9565261
+            ],
+            [
+              -64.5655745,
+              -31.9580134
+            ],
+            [
+              -64.5667695,
+              -31.9584285
+            ],
+            [
+              -64.5671178,
+              -31.956334
+            ],
+            [
+              -64.5668449,
+              -31.953502
+            ],
+            [
+              -64.565938,
+              -31.9524137
+            ],
+            [
+              -64.5605384,
+              -31.9527744
+            ],
+            [
+              -64.5585397,
+              -31.9537286
+            ],
+            [
+              -64.55748,
+              -31.9539304
+            ],
+            [
+              -64.5547934,
+              -31.9570527
+            ]
+          ]
+        ]
+      },
+      "category": "otro",
+      "text": "Este es el barrio cerrado champaqui golf, tiene pocas casas pero de clase alta, con pileta algunas y cancha de golf",
+      "town": null,
+      "camera": {
+        "x": -277.94,
+        "y": 841.3,
+        "z": -1349.37,
+        "yaw": -2.45,
+        "pitch": -0.23
+      },
+      "status": "procesada",
+      "createdAt": "2026-10-14T23:50:23.861Z",
+      "updatedAt": "2026-10-15T00:09:56.403Z",
+      "processedAt": "2026-10-15T00:08:09.008Z",
+      "resolution": "Champaquí Golf: la cancha real de OSM se pinta como fairway con 9 greens con bandera y bunkers; sin árboles en la cancha salvo en los bordes. Se agregaron 22 casas grandes de categoría (paredes blancas, zócalo de piedra, techo de teja) sobre las calles internas, 14 con pileta. (src/world/MapEdits.ts)"
+    },
+    {
+      "id": "6ad0146f4c4045906f7073f3",
+      "kind": "polygon",
+      "points": [
+        [
+          1125.9,
+          6649.9,
+          816.4
+        ],
+        [
+          1269.1,
+          7097.9,
+          823.9
+        ],
+        [
+          1349.6,
+          7240.9,
+          830.9
+        ],
+        [
+          977.5,
+          7347.1,
+          820.2
+        ],
+        [
+          826.9,
+          7267.7,
+          816.7
+        ],
+        [
+          -756.6,
+          7754.1,
+          781.4
+        ],
+        [
+          -913.9,
+          7420.8,
+          782.8
+        ],
+        [
+          -285.8,
+          7109.4,
+          787.8
+        ],
+        [
+          -241.6,
+          7030.7,
+          791.9
+        ]
+      ],
+      "lonlat": [
+        [
+          -64.5470881,
+          -31.9165292
+        ],
+        [
+          -64.5455727,
+          -31.9124892
+        ],
+        [
+          -64.5447208,
+          -31.9112003
+        ],
+        [
+          -64.5486579,
+          -31.9102419
+        ],
+        [
+          -64.550251,
+          -31.9109582
+        ],
+        [
+          -64.5670044,
+          -31.9065719
+        ],
+        [
+          -64.5686696,
+          -31.909577
+        ],
+        [
+          -64.5620241,
+          -31.9123855
+        ],
+        [
+          -64.5615564,
+          -31.9130957
+        ]
+      ],
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -64.5470881,
+              -31.9165292
+            ],
+            [
+              -64.5455727,
+              -31.9124892
+            ],
+            [
+              -64.5447208,
+              -31.9112003
+            ],
+            [
+              -64.5486579,
+              -31.9102419
+            ],
+            [
+              -64.550251,
+              -31.9109582
+            ],
+            [
+              -64.5670044,
+              -31.9065719
+            ],
+            [
+              -64.5686696,
+              -31.909577
+            ],
+            [
+              -64.5620241,
+              -31.9123855
+            ],
+            [
+              -64.5615564,
+              -31.9130957
+            ],
+            [
+              -64.5470881,
+              -31.9165292
+            ]
+          ]
+        ]
+      },
+      "category": "otro",
+      "text": "Este barrio es villa galicia\nHay pocos arboles excepto en las plazas y algunas casas",
+      "town": "Villa Ciudad Parque",
+      "camera": {
+        "x": 717.58,
+        "y": 752.63,
+        "z": 530.13,
+        "yaw": -0.26,
+        "pitch": -0.36
+      },
+      "status": "procesada",
+      "createdAt": "2026-10-14T23:46:55.405Z",
+      "updatedAt": "2026-10-15T00:09:56.467Z",
+      "processedAt": "2026-10-15T00:08:09.447Z",
+      "resolution": "Villa Galicia: se ralearon los árboles (quedan ~7% sueltos y ~45% cerca de las casas) y se respetan los de las plazas. (src/world/MapEdits.ts)"
+    },
+    {
+      "id": "6ad0144b4c4045906f7073f2",
+      "kind": "polygon",
+      "points": [
+        [
+          1979.3,
+          7588.1,
+          833.8
+        ],
+        [
+          2243.4,
+          8427.1,
+          827.1
+        ],
+        [
+          -490,
+          9114.3,
+          777.4
+        ],
+        [
+          -689.6,
+          8961.5,
+          770.9
+        ],
+        [
+          -525,
+          8269.6,
+          775
+        ]
+      ],
+      "lonlat": [
+        [
+          -64.5380591,
+          -31.908069
+        ],
+        [
+          -64.5352649,
+          -31.9005025
+        ],
+        [
+          -64.5641841,
+          -31.894305
+        ],
+        [
+          -64.5662965,
+          -31.8956832
+        ],
+        [
+          -64.5645549,
+          -31.9019224
+        ]
+      ],
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -64.5380591,
+              -31.908069
+            ],
+            [
+              -64.5352649,
+              -31.9005025
+            ],
+            [
+              -64.5641841,
+              -31.894305
+            ],
+            [
+              -64.5662965,
+              -31.8956832
+            ],
+            [
+              -64.5645549,
+              -31.9019224
+            ],
+            [
+              -64.5380591,
+              -31.908069
+            ]
+          ]
+        ]
+      },
+      "category": "otro",
+      "text": "Este barrio es el cedron\nHay muy pocos arboles excepto en las plazas y muy pocas casas",
+      "town": "Villa Ciudad Parque",
+      "camera": {
+        "x": 717.58,
+        "y": 752.63,
+        "z": 530.13,
+        "yaw": -0.26,
+        "pitch": -0.36
+      },
+      "status": "procesada",
+      "createdAt": "2026-10-14T23:46:19.238Z",
+      "updatedAt": "2026-10-15T00:09:56.535Z",
+      "processedAt": "2026-10-15T00:08:09.974Z",
+      "resolution": "El Cedrón: quedan ~18% de las casas; árboles raleados (~4% sueltos, ~40% cerca de las casas) y se conservan los de la plaza (OSM 1182759948). (src/world/MapEdits.ts)"
+    }
+  ]
 }

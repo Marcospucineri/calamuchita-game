@@ -20,6 +20,8 @@ const ROOF: Record<string, { kind: RoofKind; pitch: number; overhang: number }> 
   localA: { kind: 'chapa', pitch: 0.16, overhang: 0.35 },
   localB: { kind: 'chapa', pitch: 0.16, overhang: 0.35 },
   localC: { kind: 'chapa', pitch: 0.16, overhang: 0.35 },
+  // casas de categoría (barrio cerrado Champaquí Golf)
+  premium: { kind: 'teja', pitch: 0.36, overhang: 0.9 },
 };
 
 /** Transforma coordenadas locales del edificio (a: a lo largo, b: profundidad) a Three. */

@@ -24,6 +24,10 @@ const GROUND_COLORS: Record<number, THREE.Color> = {
   [GROUND.SHOULDER]: C(PALETTE.dirt),
   [GROUND.BANK]: C(PALETTE.sand),
   [GROUND.LAWN]: C(PALETTE.lawn),
+  // cancha de golf
+  [GROUND.FAIRWAY]: C(0x7fb24a),
+  [GROUND.GREEN]: C(0x8cc858),
+  [GROUND.BUNKER]: C(0xe6d6a6),
 };
 const ROCK = C(PALETTE.rock);
 const HIGH = C(0x8f8a5a);

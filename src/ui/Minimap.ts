@@ -37,6 +37,8 @@ export class MapRenderer {
         if (gr === 2) { r = 150; gg = 170; b = 110; }
         else if (gr === 1) { r = 214; gg = 200; b = 150; }
         else if (gr === 3 || gr === 6) { r = 222; gg = 208; b = 170; }
+        else if (gr === 7 || gr === 8) { r = 150; gg = 196; b = 108; } // cancha de golf
+        else if (gr === 9) { r = 232; gg = 218; b = 172; }
         const e = (hgt - 650) / 600;
         r = (r - e * 20) * shade; gg = (gg - e * 10) * shade; b = (b + e * 10) * shade;
         const inPlay = x >= w.meta.playArea.x0 && x <= w.meta.playArea.x1 && n >= w.meta.playArea.n0 && n <= w.meta.playArea.n1;

@@ -1,0 +1,4 @@
+{
+  "_info": "Marcas de notas ya procesadas que todavía no se subieron a la base. Se aplican con \"npm run notes\" (o al arrancar \"npm run dev\").",
+  "pendientes": []
+}

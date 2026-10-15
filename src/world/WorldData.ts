@@ -29,7 +29,7 @@ export interface River { id: number; name: string; kind: string; width: number; 
 export interface Building { x: number; n: number; r: number; w: number; d: number; l: number; s: string; y: number; k: string; name?: string }
 export interface POI { id: string; name: string; kind: string; x: number; n: number; y: number; town: string | null; ele?: number }
 
-export const GROUND = { PASTURE: 0, FIELD: 1, FOREST: 2, URBAN: 3, SHOULDER: 4, BANK: 5, LAWN: 6 } as const;
+export const GROUND = { PASTURE: 0, FIELD: 1, FOREST: 2, URBAN: 3, SHOULDER: 4, BANK: 5, LAWN: 6, FAIRWAY: 7, GREEN: 8, BUNKER: 9 } as const;
 
 export class WorldData {
   meta!: WorldMeta;
@@ -129,8 +129,10 @@ export class WorldData {
     return best ? { town: best, d: bd } : null;
   }
 
-  private indexRoads(): void {
+  /** Índice espacial de calles (se rehace si se corrige la geometría al cargar). */
+  indexRoads(): void {
     const C = WorldData.CELL;
+    this.roadGrid.clear();
     this.roads.forEach((r, ri) => {
       const p = r.p;
       for (let k = 3; k < p.length; k += 3) {
