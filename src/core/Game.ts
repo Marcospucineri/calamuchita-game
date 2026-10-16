@@ -27,6 +27,7 @@ import { MapExtrasView, applyMapEdits } from '../world/MapEdits';
 import { sharedUniforms } from '../render/PaintedMaterial';
 import { HUD } from '../ui/HUD';
 import { overlays } from '../ui/Overlays';
+import { Online } from '../multiplayer/Online';
 import { VIEWS } from '../player/CameraRig';
 import { MUSIC_OPTIONS } from '../engine/Music';
 import { Buildings } from '../world/Buildings';
@@ -65,6 +66,7 @@ export class Game {
   private miniZoom = 1;
   readonly progress: Progress;
   readonly hitchhikers: Hitchhikers;
+  readonly online: Online;
   private wallet: HTMLButtonElement;
   private ridePanel: HTMLElement;
   private accountOffered = false;
@@ -173,7 +175,20 @@ export class Game {
       if (r) this.hud.mapView.centerOn(r.destX, r.destN, 3);
     });
     this.ridePanel.querySelector('.ride-cancel')!.addEventListener('click', () => this.hitchhikers.cancel());
-    this.hud.mapView.overlay = (g, project) => {
+    this.online = new Online({
+      scene, camera: this.renderer.camera, hud: this.hud, world, player: this.player,
+      profile: () => this.progress.profile,
+      openProfile: () => this.openProfile(),
+    });
+    this.hud.mapView.overlay = (g, project, metersPerPx) => {
+      for (const o of this.online.remotes.markers()) {
+        const [ox, oy] = project(o.x, o.n);
+        g.fillStyle = '#3f8f5b'; g.strokeStyle = '#fbf5e6'; g.lineWidth = 2.5;
+        g.beginPath(); g.arc(ox, oy, 7, 0, Math.PI * 2); g.fill(); g.stroke();
+        g.font = '700 12px "Josefin Sans"'; g.textAlign = 'center'; g.lineWidth = 3.5; g.strokeStyle = '#fbf5e6';
+        g.strokeText(o.name, ox, oy - 12); g.fillStyle = '#24452f'; g.fillText(o.name, ox, oy - 12);
+      }
+      void metersPerPx;
       const r = this.hitchhikers.active;
       if (!r) return;
       const [x, y] = project(r.destX, r.destN);
@@ -299,6 +314,7 @@ export class Game {
     openProfile(this.progress.profile, balance, (profile) => {
       this.progress.profile = profile;
       this.player.person.setAppearance(profile.appearance);
+      this.online.refreshLook();
       this.save();
     }, () => this.save());
   }
@@ -310,6 +326,7 @@ export class Game {
       setQuality: (q) => { try { localStorage.setItem('calamuchita.quality', q); } catch { /* sin almacenamiento */ } },
       onReload: () => { this.save(); location.reload(); },
       music: { options: MUSIC_OPTIONS, index: this.music.index, set: (i) => this.music.set(i) },
+      online: accounts.user ? { enabled: this.online.enabled, set: (on) => this.online.setEnabled(on) } : undefined,
       camera: {
         views: VIEWS.map((v) => ({ id: v.id, label: v.label })),
         current: this.cameraRig.view,
@@ -457,6 +474,7 @@ export class Game {
 
     this.saveTimer += dt;
     if (this.saveTimer > 5) { this.saveTimer = 0; this.save(); }
+    this.online.update(dt);
     this.renderer.render();
   }
 

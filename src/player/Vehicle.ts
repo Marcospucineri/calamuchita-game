@@ -138,6 +138,37 @@ export class Vehicle {
     m.shade.color.copy(base).multiplyScalar(0.78);
   }
 
+  /** Copia liviana para ver a otros jugadores: sin física ni interior, con su propio color de chapa. */
+  makeRemote(paintId: string): { group: THREE.Group; wheels: THREE.Object3D[]; setPaint(id: string): void; dispose(): void } {
+    const group = this.model.clone(true);
+    group.traverse((o) => { if (o.name === 'Vidrio exterior') o.visible = true; });
+    const own = new Map<THREE.Material, THREE.MeshToonMaterial>();
+    const base = this.bodyMats;
+    if (base) {
+      for (const m of [base.paint, base.light, base.shade]) {
+        const c = m.clone();
+        // clone() no copia el shader pintado a mano
+        c.onBeforeCompile = m.onBeforeCompile;
+        c.customProgramCacheKey = m.customProgramCacheKey;
+        own.set(m, c);
+      }
+      group.traverse((o) => { if (o instanceof THREE.Mesh && own.has(o.material as THREE.Material)) o.material = own.get(o.material as THREE.Material)!; });
+    }
+    const wheels = this.wheels.map((w) => group.children[this.model.children.indexOf(w)]);
+    const wx = 1.38, wz = 0.78, y = -0.05 - SEDAN.suspensionRest + 0.12;
+    [[wx, wz], [wx, -wz], [-wx, wz], [-wx, -wz]].forEach(([x, z], i) => wheels[i]?.position.set(x, y, z));
+    const setPaint = (id: string) => {
+      const def = CAR_PAINTS.find((p) => p.id === id) ?? CAR_PAINTS[0];
+      if (!base) return;
+      const color = new THREE.Color(def.paint);
+      own.get(base.paint)!.color.copy(color);
+      own.get(base.light)!.color.copy(color).offsetHSL(0, -0.02, 0.05);
+      own.get(base.shade)!.color.copy(color).multiplyScalar(0.78);
+    };
+    setPaint(paintId);
+    return { group, wheels, setPaint, dispose: () => own.forEach((m) => m.dispose()) };
+  }
+
   private buildModel(): THREE.Group {
     const g = new THREE.Group();
     const paint = paintedMaterial({ color: 0xbca36b, brushScale: 1.4, brushAmount: 0.16, rim: 0.25 });

@@ -13,6 +13,7 @@ const paths: Record<string, string> = {
   brake: '<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M3 5a12 12 0 0 0 0 14M21 5a12 12 0 0 1 0 14M12 5v2m7 5h-2m-5 7v-2m-7-5h2"/>',
   pedal: '<path d="m10 3 8 2a2 2 0 0 1 1 3l-5 12a2 2 0 0 1-2 1l-6-2a2 2 0 0 1-1-3L8 5a2 2 0 0 1 2-2Z"/><path d="m11 7-3 9m7-8-3 9"/>',
   jump: '<path d="M12 21V3m-7 7 7-7 7 7"/>',
+  chat: '<path d="M4 5h16v11H10l-5 4v-4H4V5Z"/><path d="M8 9h8M8 12h5"/>',
   camera: '<path d="M3 7h4l2-3h6l2 3h4v13H3z"/><circle cx="12" cy="13" r="4"/>',
 };
 export const icon = (name: string, className = ''): string => `<svg class="ui-icon ${className}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] ?? paths.star}</svg>`;

@@ -165,12 +165,15 @@ export class Overlays {
         ${seg('music', o.music.options.map((l, i) => ({ id: String(i), label: l })), String(o.music.index))}
       </div>
       ${o.camera ? `<div class="opt"><h4>Cámara</h4>${seg('camera', o.camera.views, o.camera.current)}</div>` : ''}
+      ${o.online ? `<div class="opt"><h4>Otros jugadores</h4>${seg('online', [{ id: 'on', label: 'Verlos y chatear' }, { id: 'off', label: 'Jugar solo' }], o.online.enabled ? 'on' : 'off')}<p class="q-note">Con «Jugar solo» no aparecés en el mapa de los demás ni ves el chat.</p></div>` : ''}
       ${o.onRestart ? `<div class="opt"><h4>Partida</h4><p>Borra las postales y la posición guardadas en este navegador.</p><button class="btn btn-light restart">Empezar de cero</button></div>` : ''}`;
     // la música en dos columnas: 4 opciones
     const segMusic = box.querySelector('[data-name="music"]') as HTMLElement;
     segMusic.style.gridTemplateColumns = 'repeat(3, minmax(0, 1fr))';
     const segCam = box.querySelector('[data-name="camera"]') as HTMLElement | null;
     if (segCam) segCam.style.gridTemplateColumns = '1fr 1fr';
+    const segOnline = box.querySelector('[data-name="online"]') as HTMLElement | null;
+    if (segOnline) segOnline.style.gridTemplateColumns = '1fr 1fr';
     const initialQ = o.quality;
     for (const g of box.querySelectorAll<HTMLElement>('.seg')) {
       for (const b of g.querySelectorAll<HTMLButtonElement>('button')) {
@@ -182,6 +185,7 @@ export class Overlays {
             box.querySelector('.q-apply')?.classList.toggle('hidden', id === initialQ);
           } else if (g.dataset.name === 'music') o.music.set(Number(id));
           else if (g.dataset.name === 'camera') o.camera?.set(id);
+          else if (g.dataset.name === 'online') o.online?.set(id === 'on');
         });
       }
     }
@@ -300,6 +304,8 @@ export interface OptionsContext {
   setQuality(q: string): void;
   music: { options: string[]; index: number; set(i: number): void };
   camera?: { views: { id: string; label: string }[]; current: string; set(id: string): void };
+  /** Jugar con otros (solo dentro del juego y con cuenta). */
+  online?: { enabled: boolean; set(on: boolean): void };
   onReload?: () => void;
   onRestart?: () => void;
 }

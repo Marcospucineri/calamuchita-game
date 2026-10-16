@@ -123,6 +123,8 @@ export class MapRenderer {
 export class Minimap {
   readonly el: HTMLCanvasElement;
   private g: CanvasRenderingContext2D;
+  /** Otros jugadores conectados (coordenadas del mapa). */
+  others: { x: number; n: number }[] = [];
 
   constructor(private map: MapRenderer, private w: WorldData) {
     this.el = document.createElement('canvas');
@@ -152,6 +154,13 @@ export class Minimap {
       g.strokeStyle = '#fff6e0';
       g.lineWidth = 1.5 / zoom;
       g.beginPath(); g.arc(qx - px, qy - py, 4 / zoom, 0, Math.PI * 2); g.fill(); g.stroke();
+    }
+    for (const o of this.others) {
+      const [ox, oy] = this.map.toPx(o.x, o.n);
+      g.fillStyle = '#3f8f5b';
+      g.strokeStyle = '#fff6e0';
+      g.lineWidth = 1.5 / zoom;
+      g.beginPath(); g.arc(ox - px, oy - py, 4.5 / zoom, 0, Math.PI * 2); g.fill(); g.stroke();
     }
     if (carX !== null && carN !== null) {
       const [cx, cy] = this.map.toPx(carX, carN);

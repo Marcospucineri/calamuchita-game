@@ -198,6 +198,13 @@ export class Aircraft {
     for (const wheel of this.wheels) wheel.rotation.z = this.wheelAngle;
   }
 
+  /** Copia liviana para ver a otros jugadores (comparte geometría y materiales). */
+  makeRemote(): { group: THREE.Group; propeller: THREE.Object3D | null } {
+    const group = this.mesh.clone(true);
+    group.visible = true;
+    return { group, propeller: group.getObjectByName('helice') ?? null };
+  }
+
   private buildModel(): THREE.Group {
     const group = new THREE.Group();
     const ivory = paintedMaterial({ color: 0xf3ebd2, brushScale: 1.5, brushAmount: 0.12, rim: 0.3 });
@@ -268,6 +275,7 @@ export class Aircraft {
     this.propeller.position.set(2.48, 0.35, 0);
     const blade = new THREE.Mesh(new THREE.BoxGeometry(0.07, 2.65, 0.16), rubber);
     this.propeller.add(blade);
+    this.propeller.name = 'helice';
     group.add(this.propeller);
     group.name = 'Avioneta del Aeroclub de Villa General Belgrano';
     return group;
