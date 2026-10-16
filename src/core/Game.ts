@@ -18,6 +18,9 @@ import { ShopDecor, planShops } from '../world/Shops';
 import { MapExtrasView, applyMapEdits } from '../world/MapEdits';
 import { sharedUniforms } from '../render/PaintedMaterial';
 import { HUD } from '../ui/HUD';
+import { overlays } from '../ui/Overlays';
+import { VIEWS } from '../player/CameraRig';
+import { MUSIC_OPTIONS } from '../engine/Music';
 import { Buildings } from '../world/Buildings';
 import { Landmarks } from '../world/Landmarks';
 import { Roads } from '../world/Roads';
@@ -54,12 +57,12 @@ export class Game {
   private miniZoom = 1;
   debug: GameDebug | null = null;
 
-  constructor(readonly world: WorldData, canvas: HTMLCanvasElement, uiRoot: HTMLElement, quality: QualityLevel, save: SaveData | null, vehicle: VehicleChoice = save?.vehicle ?? 'car') {
+  constructor(readonly world: WorldData, canvas: HTMLCanvasElement, uiRoot: HTMLElement, readonly quality: QualityLevel, save: SaveData | null, vehicle: VehicleChoice = save?.vehicle ?? 'car') {
     prepareAirfield(world);
     // correcciones del mapa que salieron de las anotaciones del modo debug
     const tEdits = performance.now();
     const mapExtras = applyMapEdits(world);
-    console.info(`[calamuchita] correcciones del mapa: ${(performance.now() - tEdits).toFixed(0)}ms · ${mapExtras.pools.length} piletas · ${mapExtras.flags.length} greens`);
+    console.info(`[vallecito] correcciones del mapa: ${(performance.now() - tEdits).toFixed(0)}ms · ${mapExtras.pools.length} piletas · ${mapExtras.flags.length} greens`);
     const q = QUALITY[quality];
     const tStart = performance.now();
     let tLast = tStart;
@@ -75,7 +78,7 @@ export class Game {
     lap('roads');
     // locales comerciales: cambia estilos y saca árboles, por eso va antes de casas y vegetación
     const shopPlan = planShops(world);
-    console.info(`[calamuchita] locales: ${shopPlan.fronts.filter((f) => f.kind === 'centro').length} centroeuropeos, ${shopPlan.fronts.filter((f) => f.kind === 'local').length} comunes, ${shopPlan.decks.length} decks, ${shopPlan.magnolias.length} en Las Magnolias`);
+    console.info(`[vallecito] locales: ${shopPlan.fronts.filter((f) => f.kind === 'centro').length} centroeuropeos, ${shopPlan.fronts.filter((f) => f.kind === 'local').length} comunes, ${shopPlan.decks.length} decks, ${shopPlan.magnolias.length} en Las Magnolias`);
     const buildings = new Buildings(world, scene);
     this.shops = new ShopDecor(shopPlan, scene);
     new MapExtrasView(mapExtras, scene);
@@ -139,7 +142,11 @@ export class Game {
     this.hud.onTravel = (x, n, label) => this.fastTravel(x, n, label);
     this.hud.onVehicleChange = (choice) => this.selectVehicle(choice);
     this.hud.onReturnToAirfield = () => this.returnToAirfield();
-    this.hud.onClose = () => { const p = this.player.position; this.hud.toggleMap(p.x, -p.z, this.pois.discovered); };
+    this.hud.onClose = () => this.toggleMap();
+    this.hud.onMapButton = () => { if (!overlays.isOpen) this.toggleMap(); };
+    this.hud.onAlbum = () => this.openAlbum();
+    this.hud.onMenu = () => this.openPause();
+    this.hud.onOpenPostal = (id) => this.openAlbum(id);
 
     bus.on('player:mode', (e) => {
       this.cameraRig.setMode(e.mode);
@@ -152,7 +159,7 @@ export class Game {
     lap('first-update');
     window.addEventListener('beforeunload', () => this.save());
     (window as unknown as { __game: Game }).__game = this;
-    console.info(`[calamuchita] armado en ${(performance.now() - tStart).toFixed(0)}ms: ${timings.join(', ')}`);
+    console.info(`[vallecito] armado en ${(performance.now() - tStart).toFixed(0)}ms: ${timings.join(', ')}`);
   }
 
   /** Compila los shaders sin trabar la página (antes del primer cuadro). */
@@ -174,16 +181,79 @@ export class Game {
   }
 
   start(): void {
+    overlays.escByGame = true;
     this.audio.start();
     this.music.start();
     this.loop.start();
+    const left = this.world.pois.length - this.pois.discovered.size;
     bus.emit('toast', this.player.flying
-      ? { text: 'Aeroclub de Villa General Belgrano', sub: 'W acelera · S desacelera · tirá ↓ para despegar' }
-      : { text: 'Bienvenido al Valle de Calamuchita', sub: 'Buscá las postales ✉ en los tres pueblos' });
+      ? { text: 'Aeroclub de Villa General Belgrano', sub: this.input.touch ? 'Acelerá y tirá el joystick hacia abajo para despegar' : 'W acelera · S desacelera · tirá ↓ para despegar' }
+      : { text: 'Bienvenido a Vallecito', sub: left === this.world.pois.length ? `Buscá las ${left} postales del valle` : left ? `Te faltan ${left} postales` : 'Tenés todas las postales del valle' });
+  }
+
+  /** El juego queda quieto mientras hay un mapa, el álbum o un menú abiertos. */
+  get paused(): boolean {
+    return this.hud.isMapOpen || overlays.isOpen;
+  }
+
+  private toggleMap(): void {
+    const at = this.debug?.god ? this.renderer.camera.position : this.player.position;
+    this.hud.toggleMap(at.x, -at.z, this.pois.discovered);
+  }
+
+  openAlbum(focus?: string): void {
+    if (this.hud.isMapOpen) this.toggleMap();
+    overlays.openAlbum({
+      pois: this.world.pois,
+      towns: this.world.meta.towns,
+      discovered: this.pois.discovered,
+      focus,
+      onTravel: this.player.flying ? undefined : (p) => { overlays.closeAll(); this.fastTravel(p.x, p.n, p.name); },
+    });
+  }
+
+  openOptions(): void {
+    overlays.openOptions({
+      inGame: true,
+      quality: this.quality,
+      setQuality: (q) => { try { localStorage.setItem('calamuchita.quality', q); } catch { /* sin almacenamiento */ } },
+      onReload: () => { this.save(); location.reload(); },
+      music: { options: MUSIC_OPTIONS, index: this.music.index, set: (i) => this.music.set(i) },
+      camera: {
+        views: VIEWS.map((v) => ({ id: v.id, label: v.label })),
+        current: this.cameraRig.view,
+        set: (id) => {
+          this.cameraRig.setView(id);
+          try { localStorage.setItem('calamuchita.camera', id); } catch { /* sin almacenamiento */ }
+        },
+      },
+    });
+  }
+
+  openPause(): void {
+    if (overlays.isOpen) return;
+    if (this.hud.isMapOpen) this.toggleMap();
+    overlays.openPause([
+      { id: 'resume', label: 'Seguir paseando', primary: true },
+      { id: 'album', label: `Postales · ${this.pois.discovered.size} de ${this.world.pois.length}`, icon: 'postal' },
+      { id: 'map', label: 'Mapa y viaje rápido', icon: 'mapa' },
+      { id: 'options', label: 'Opciones' },
+      { id: 'controls', label: 'Controles' },
+      { id: 'credits', label: 'Créditos' },
+      { id: 'home', label: 'Volver al inicio' },
+    ], (id) => {
+      if (id === 'resume') { overlays.closeAll(); return; }
+      if (id === 'map') { overlays.closeAll(); this.toggleMap(); return; }
+      if (id === 'album') this.openAlbum();
+      else if (id === 'options') this.openOptions();
+      else if (id === 'controls') overlays.openControls(!!this.input.touch);
+      else if (id === 'credits') overlays.openCredits();
+      else if (id === 'home') { this.save(); location.href = location.pathname; }
+    });
   }
 
   private fixed(dt: number): void {
-    if (this.hud.isMapOpen || this.debug?.god) return;
+    if (this.paused || this.debug?.god) return;
     this.player.fixedUpdate(dt, this.state, this.cameraRig.yaw);
     this.physics.step();
     this.player.postStep();
@@ -194,10 +264,17 @@ export class Game {
     sharedUniforms.uTime.value = this.time;
     this.state = this.input.read();
     const p = this.player;
-    const pos = p.position;
 
-    const mapAt = this.debug?.god ? this.renderer.camera.position : pos;
-    if (this.state.mapPressed) this.hud.toggleMap(mapAt.x, -mapAt.z, this.pois.discovered);
+    // con ?debug, Esc es del modo debug (cerrar notas, soltar herramienta); el menú queda en el botón
+    if (this.state.pausePressed) {
+      if (overlays.isOpen) overlays.closeTop();
+      else if (this.debug) { /* nada */ }
+      else if (this.hud.isMapOpen) this.toggleMap();
+      else this.openPause();
+    }
+    const menu = overlays.isOpen;
+    if (this.state.mapPressed && !menu) this.toggleMap();
+    if (menu) { this.state.cameraPressed = this.state.musicPressed = this.state.interactPressed = this.state.resetPressed = false; }
     if (this.state.cameraPressed) {
       this.cameraRig.cycleView();
       // sin cartel al cambiar de cámara
@@ -208,10 +285,10 @@ export class Game {
       bus.emit('toast', { text: `♪ Música: ${name}`, sub: 'N para cambiar' });
     }
     if (this.debug?.god) { this.godFrame(dt); return; }
-    if (!this.hud.isMapOpen) p.handleActions(this.state);
+    if (!this.paused) p.handleActions(this.state);
 
     p.car.render(alpha);
-    p.plane.render(alpha, this.hud.isMapOpen ? 0 : dt);
+    p.plane.render(alpha, this.paused ? 0 : dt);
     p.person.render(alpha, dt);
     const driving = p.driving;
     const flying = p.flying;
@@ -248,7 +325,8 @@ export class Game {
       this.input.touch.setFlying(flying);
       this.hud.setPrompt(null);
     } else this.hud.setPrompt(action ? `<kbd>E</kbd> ${action}` : null);
-    this.audio.update(driving || flying, speed, flying ? p.plane.throttleOut : p.car.throttleOut, flying ? 0 : p.car.rough, flying);
+    const live = (driving || flying) && !this.paused;
+    this.audio.update(live, live ? speed : 0, flying ? p.plane.throttleOut : p.car.throttleOut, flying ? 0 : p.car.rough, flying);
 
     this.saveTimer += dt;
     if (this.saveTimer > 5) { this.saveTimer = 0; this.save(); }

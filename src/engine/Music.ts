@@ -9,7 +9,10 @@ const TRACKS = [
   { file: 'music/sound-effect-641.mp3', name: 'Tema 2' },
   { file: 'music/sound-effect-1467.mp3', name: 'Tema 3' },
 ];
-const KEY = 'calamuchita.music';
+export const MUSIC_KEY = 'calamuchita.music';
+const KEY = MUSIC_KEY;
+/** Nombres para el menú de opciones (el último es el silencio). */
+export const MUSIC_OPTIONS = [...TRACKS.map((t) => t.name), 'Sin música'];
 /** Nivel RMS al que se lleva cada tema (bajo: es música de fondo). */
 const TARGET_RMS = 0.07;
 /** Duración del fundido entre el final y el principio del loop (s). */
@@ -65,7 +68,13 @@ export class Music {
 
   /** Pasa al siguiente tema (o al silencio) y devuelve su nombre. */
   next(): string {
-    this.index = (this.index + 1) % (TRACKS.length + 1);
+    return this.set((this.index + 1) % (TRACKS.length + 1));
+  }
+
+  /** Elige un tema por número (TRACKS.length = silencio) y devuelve su nombre. */
+  set(i: number): string {
+    if (i === this.index && this.playing) return this.label;
+    this.index = Math.max(0, Math.min(TRACKS.length, i));
     try { localStorage.setItem(KEY, String(this.index)); } catch { /* sin almacenamiento */ }
     this.play(this.index, FADE);
     return this.label;

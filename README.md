@@ -1,4 +1,6 @@
-# Calamuchita
+# Vallecito
+
+*Manejá el valle.* · [vallecito.ar](https://vallecito.ar) · creado por Marcos Pucineri ([Valle Visual](https://vallevisual.com))
 
 Juego de manejo, vuelo y exploración por el Valle de Calamuchita (Córdoba, Argentina) con **geografía real**:
 Villa General Belgrano, Los Reartes y Villa Ciudad Parque. Se juega en el navegador.

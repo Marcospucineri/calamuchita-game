@@ -250,9 +250,9 @@ export function signTexture(title: string, subtitle: string): THREE.CanvasTextur
   g.fillStyle = '#f3e6c4';
   g.shadowColor = 'rgba(30,10,0,0.6)';
   g.shadowOffsetY = 3;
-  g.font = '700 92px Bitter, Georgia, serif';
+  g.font = '700 92px "Josefin Sans", sans-serif';
   g.fillText(title, 512, 128);
-  g.font = '600 50px Bitter, Georgia, serif';
+  g.font = '600 50px "Josefin Sans", sans-serif';
   g.fillText(subtitle, 512, 205);
   return tex(c, false);
 }

@@ -219,7 +219,7 @@ export class Debug implements GameDebug {
     const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), notes: this.notes }, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'anotaciones-calamuchita.json';
+    a.download = 'anotaciones-vallecito.json';
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   }
@@ -607,7 +607,7 @@ export class Debug implements GameDebug {
           const [cx, cn] = centroid(n.points);
           const [sx, sy] = S(cx, cn);
           const t = n.text.length > 34 ? n.text.slice(0, 33) + '…' : n.text;
-          g.font = '700 11px Nunito, sans-serif'; g.textAlign = 'center';
+          g.font = '700 11px "Josefin Sans", sans-serif'; g.textAlign = 'center';
           g.lineWidth = 3; g.strokeStyle = 'rgba(255,248,230,0.95)'; g.strokeText(t, sx, sy - 10);
           g.fillStyle = '#2d2016'; g.fillText(t, sx, sy - 10);
         }
@@ -645,10 +645,10 @@ function makeLabel(text: string, color: string, done: boolean): THREE.Sprite {
   const t = text.length > 46 ? text.slice(0, 45) + '…' : text;
   const c = document.createElement('canvas');
   const g = c.getContext('2d')!;
-  g.font = '700 28px Nunito, sans-serif';
+  g.font = '700 28px "Josefin Sans", sans-serif';
   const w = Math.ceil(g.measureText(t).width) + 40;
   c.width = w; c.height = 52;
-  g.font = '700 28px Nunito, sans-serif';
+  g.font = '700 28px "Josefin Sans", sans-serif';
   g.fillStyle = done ? 'rgba(80,80,80,0.75)' : 'rgba(255,248,230,0.95)';
   g.beginPath(); g.roundRect(2, 2, w - 4, 48, 14); g.fill();
   g.fillStyle = color; g.fillRect(12, 14, 8, 24);

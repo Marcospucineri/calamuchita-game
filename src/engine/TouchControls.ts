@@ -1,6 +1,7 @@
 /**
  * Controles táctiles para celular: joystick a la izquierda (dirección / caminar),
- * botones a la derecha (acelerar, frenar, acción, mapa, cámara, música).
+ * botones a la derecha (acelerar, frenar, acción, cámara, música). El mapa, las postales y el
+ * menú son los botones redondos del HUD.
  * El botón de la esquina inferior derecha oculta todo lo que no sea esencial
  * (queda la cruceta y acelerar/frenar, o saltar a pie).
  * Arrastrar sobre el resto de la pantalla mueve la cámara (lo maneja Input).
@@ -33,7 +34,6 @@ export class TouchControls {
       <div class="tbtns">
         <div class="tb-extras">
           <button class="tb tb-small tb-flight hidden" data-k="reset" aria-label="Volver al aeroclub">Aeroclub</button>
-          <button class="tb tb-small" data-k="map" aria-label="Mapa">Mapa</button>
           <button class="tb tb-small" data-k="cam" aria-label="Cambiar cámara">Cámara</button>
           <button class="tb tb-small" data-k="music" aria-label="Cambiar música">Música</button>
         </div>

@@ -1,0 +1,17 @@
+{
+  "name": "Vallecito · Manejá el valle",
+  "short_name": "Vallecito",
+  "description": "Recorré el Valle de Calamuchita en auto o avioneta y juntá las postales de cada lugar.",
+  "lang": "es-AR",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#10171A",
+  "theme_color": "#24452F",
+  "icons": [
+    { "src": "brand/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "brand/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "brand/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

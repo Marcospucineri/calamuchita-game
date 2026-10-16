@@ -5,6 +5,7 @@ import { WorldData } from '../world/WorldData';
 import { MapRenderer, Minimap } from './Minimap';
 import { BigMapView } from './BigMap';
 import { isTyping } from '../engine/Input';
+import { postcardImage } from '../gameplay/Postcards';
 
 const SURFACE_LABEL: Record<string, string> = {
   asphalt: 'asfalto', paving: 'adoquín', compacted: 'compactado', gravel: 'ripio', dirt: 'tierra', grass: 'campo', water: 'agua',
@@ -31,6 +32,14 @@ export class HUD {
   private vehicle: 'car' | 'plane' = 'car';
   private carHelp = '';
   private flightInfo!: HTMLElement;
+  private surf!: HTMLElement;
+  private lastSurf: string | null = '';
+  /** Botones redondos del HUD. */
+  onMapButton: (() => void) | null = null;
+  onAlbum: (() => void) | null = null;
+  onMenu: (() => void) | null = null;
+  /** Tocar el aviso de una postal nueva la abre en el álbum. */
+  onOpenPostal: ((id: string) => void) | null = null;
   /** Lo define el juego: viajar a un punto (coordenadas del pipeline). */
   onTravel: ((x: number, n: number, label: string) => void) | null = null;
   onClose: (() => void) | null = null;
@@ -48,39 +57,50 @@ export class HUD {
     this.minimap = new Minimap(this.map, w);
     this.root = document.createElement('div');
     this.root.className = 'hud';
+    const ico = (n: string) => `${import.meta.env.BASE_URL}brand/iconos/${n}.webp`;
     this.root.innerHTML = `
-      <div class="place"><div class="place-name"></div><div class="place-sub"></div></div>
-      <div class="postales" title="Postales descubiertas"><span class="postal-ico"></span><b>0</b>/<span>0</span></div>
-      <div class="vehicle-switch" role="group" aria-label="Elegí tu vehículo">
-        <button data-vehicle="car" aria-pressed="true">Auto</button>
-        <button data-vehicle="plane" aria-pressed="false">Avioneta</button>
+      <div class="hud-tl">
+        <div class="place glass"><div class="place-name"></div><div class="place-sub"></div></div>
+        <div class="vehicle-switch glass" role="group" aria-label="Elegí tu vehículo">
+          <button data-vehicle="car" aria-pressed="true"><img alt="" src="${ico('auto')}">Auto</button>
+          <button data-vehicle="plane" aria-pressed="false"><img alt="" src="${ico('avioneta')}">Avioneta</button>
+        </div>
       </div>
-      <div class="flight-info hidden"><b>En pista</b><span>0 m sobre el terreno</span></div>
-      <div class="mini-wrap"></div>
-      <div class="speedo"><b>0</b><span>km/h</span></div>
-      <div class="prompt hidden"></div>
-      <div class="toasts"></div>
-      <div class="help">
-        <h3>Controles</h3>
+      <div class="hud-tr">
+        <div class="mini-wrap"></div>
+        <div class="hud-btns">
+          <button class="hbtn glass" data-a="map" aria-label="Mapa (M)" title="Mapa (M)"><img alt="" src="${ico('mapa')}"></button>
+          <button class="hbtn glass postales" data-a="album" aria-label="Postales" title="Postales"><img alt="" src="${ico('postal')}"><span class="badge"><b>0</b>/<span>0</span></span></button>
+          <button class="hbtn glass" data-a="menu" aria-label="Menú (Esc)" title="Menú (Esc)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>
+        </div>
+      </div>
+      <div class="hud-bl">
+        <div class="speedo glass"><div class="n"><b>0</b><span class="u">km/h</span></div><span class="surf hidden"></span></div>
+        <div class="flight-info glass hidden"><b>En pista</b><span>0 m sobre el terreno</span></div>
+      </div>
+      <div class="prompt glass hidden"></div>
+      <div class="toasts" aria-live="polite"></div>
+      <div class="help glass">
+        <h3>Para arrancar</h3>
         <ul>
-          <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> manejar / caminar</li>
-          <li><kbd>Espacio</kbd> freno de mano / saltar</li>
-          <li><kbd>E</kbd> bajar o subir al auto</li>
-          <li><kbd>Shift</kbd> correr</li>
-          <li><kbd>M</kbd> mapa · <kbd>C</kbd> cámara (5 vistas) · <kbd>R</kbd> enderezar</li>
-          <li><kbd>N</kbd> música (3 temas o silencio)</li>
-          <li>Arrastrá el mouse para mirar · rueda para zoom</li>
-          <li><kbd>H</kbd> ocultar esta ayuda</li>
+          <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> manejar · <kbd>Espacio</kbd> freno de mano</li>
+          <li><kbd>E</kbd> bajarse del auto · <kbd>M</kbd> mapa</li>
+          <li><kbd>Esc</kbd> menú y todos los controles</li>
         </ul>
       </div>
-      <div class="bigmap hidden"><div class="bigmap-card"><div class="bigmap-head"><div><h2>Valle de Calamuchita</h2><span>Arrastrá para moverte, acercá con la rueda o dos dedos y tocá un punto para viajar</span></div><button class="bigmap-close" aria-label="Cerrar mapa">✕</button></div><div class="trips" aria-label="Viaje rápido"></div><div class="bigmap-body"><canvas aria-label="Mapa del valle"></canvas><div class="map-zoom"><button data-z="in" aria-label="Acercar">+</button><button data-z="out" aria-label="Alejar">−</button><button data-z="me" aria-label="Centrar en tu posición">◎</button></div><div class="map-confirm hidden" role="group" aria-label="Confirmar viaje"><span></span><button class="go">Viajar</button><button class="cancel" aria-label="Cancelar">✕</button></div></div><div class="bigmap-foot">Datos: © colaboradores de OpenStreetMap · Relieve: Terrarium / AWS Open Data · <kbd>+</kbd> <kbd>−</kbd> zoom · <kbd>M</kbd> para cerrar</div></div></div>
+      <div class="bigmap hidden"><div class="bigmap-card"><div class="bigmap-head"><div><h2>Valle de Calamuchita</h2><span>Arrastrá para moverte, acercá con la rueda o dos dedos y tocá un punto para viajar</span></div><button class="bigmap-close" aria-label="Cerrar mapa">✕</button></div><div class="trips" aria-label="Viaje rápido"></div><div class="bigmap-body"><canvas aria-label="Mapa del valle"></canvas><a class="osm" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a><div class="map-zoom"><button data-z="in" aria-label="Acercar">+</button><button data-z="out" aria-label="Alejar">−</button><button data-z="me" aria-label="Centrar en tu posición">◎</button></div><div class="map-confirm hidden" role="group" aria-label="Confirmar viaje"><span></span><button class="go">Viajar</button><button class="cancel" aria-label="Cancelar">✕</button></div></div></div></div>
     `;
+    // en el celu la velocidad va debajo del nombre del lugar (abajo están los pedales)
+    if (document.body.classList.contains('touch')) {
+      const tl = this.root.querySelector('.hud-tl')!;
+      this.root.querySelectorAll('.hud-bl > *').forEach((n) => tl.appendChild(n));
+    }
     parent.appendChild(this.root);
     // La activación por teclado de los botones no debe accionar el vehículo.
     // Después de elegir con mouse/touch, Espacio vuelve a controlar el vehículo.
     // Una activación por teclado conserva el foco para seguir navegando los botones.
     this.root.addEventListener('click', (e) => {
-      if (e.detail > 0 && e.target instanceof Element) e.target.closest('button')?.blur();
+      if (e.detail > 0 && e.target instanceof Element) (e.target.closest('button') as HTMLButtonElement | null)?.blur();
     });
     this.root.addEventListener('keydown', (e) => {
       if (e.target instanceof HTMLButtonElement && (e.code === 'Space' || e.code === 'Enter')) e.stopPropagation();
@@ -94,6 +114,7 @@ export class HUD {
     this.placeSub = q('.place-sub');
     this.speed = q('.speedo b');
     this.speedUnit = q('.speedo');
+    this.surf = q('.surf');
     this.prompt = q('.prompt');
     this.toastBox = q('.toasts');
     this.postales = q('.postales');
@@ -107,14 +128,21 @@ export class HUD {
     this.bigCanvas = q('.bigmap canvas');
     this.setupTravel();
     q('.mini-wrap').appendChild(this.minimap.el);
-    this.postales.querySelector('span:last-child')!.textContent = String(w.pois.length);
+    this.postales.querySelector('.badge > span')!.textContent = String(w.pois.length);
+    for (const b of this.root.querySelectorAll<HTMLButtonElement>('.hbtn')) {
+      b.addEventListener('click', () => {
+        if (b.dataset.a === 'map') this.onMapButton?.();
+        else if (b.dataset.a === 'album') this.onAlbum?.();
+        else this.onMenu?.();
+      });
+    }
 
     window.addEventListener('keydown', (e) => { if (e.code === 'KeyH' && !isTyping(e)) this.help.classList.toggle('hidden'); });
-    setTimeout(() => this.help.classList.add('faded'), 14000);
+    setTimeout(() => this.help.classList.add('faded'), 12000);
 
     bus.on('poi:discovered', (e) => {
       const p = w.pois.find((x) => x.id === e.id);
-      this.toast(`Postal: ${e.name}`, `${p ? kindLabel(p.kind) : 'Lugar'} · ${e.found} de ${e.total}`, true);
+      this.postalToast(e.id, e.name, `${p ? kindLabel(p.kind) : 'Lugar'} · ${e.found} de ${e.total}`);
       this.setFound(e.found);
     });
     bus.on('toast', (e) => this.toast(e.text, e.sub));
@@ -132,13 +160,9 @@ export class HUD {
     this.help.innerHTML = flying ? `
       <h3>Avioneta</h3>
       <ul>
-        <li><kbd>W</kbd> acelerar · <kbd>S</kbd> desacelerar</li>
-        <li><kbd>A</kbd><kbd>D</kbd> o <kbd>←</kbd><kbd>→</kbd> girar (planea inclinando las alas)</li>
-        <li><kbd>↑</kbd> baja la trompa · <kbd>↓</kbd> sube la trompa</li>
+        <li><kbd>W</kbd> acelerar · <kbd>S</kbd> desacelerar · <kbd>A</kbd><kbd>D</kbd> girar</li>
         <li>Acelerá por la pista y tirá <kbd>↓</kbd> para despegar</li>
-        <li><kbd>R</kbd> volver al aeroclub</li>
-        <li><kbd>M</kbd> mapa · <kbd>C</kbd> cámara (5 vistas) · <kbd>N</kbd> música · <kbd>H</kbd> ayuda</li>
-        <li>Gamepad: RT/LT motor · stick izquierdo giro y trompa (adelante baja) · LB volver</li>
+        <li><kbd>R</kbd> volver al aeroclub · <kbd>Esc</kbd> menú</li>
       </ul>` : this.carHelp;
     this.help.classList.remove('faded');
     for (const b of this.root.querySelectorAll<HTMLButtonElement>('.ground-trip')) {
@@ -158,12 +182,25 @@ export class HUD {
   }
 
   setFound(n: number): void {
-    this.postales.querySelector('b')!.textContent = String(n);
+    this.postales.querySelector('.badge b')!.textContent = String(n);
+  }
+
+  /** Aviso grande de postal nueva, con la ilustración; tocarlo la abre. */
+  private postalToast(id: string, name: string, sub: string): void {
+    const el = document.createElement('button');
+    el.className = 'toast postal';
+    el.innerHTML = `<img alt="" src="${postcardImage(id, true)}"><div><div class="label eyebrow">Postal nueva</div><div class="t1"></div><div class="t2"></div></div>`;
+    el.querySelector('.t1')!.textContent = name;
+    el.querySelector('.t2')!.textContent = sub;
+    el.addEventListener('click', () => { el.remove(); this.onOpenPostal?.(id); });
+    this.toastBox.prepend(el);
+    setTimeout(() => el.classList.add('out'), 6500);
+    setTimeout(() => el.remove(), 7300);
   }
 
   toast(text: string, sub?: string, postal = false): void {
     const el = document.createElement('div');
-    el.className = 'toast' + (postal ? ' postal' : '');
+    el.className = 'toast glass' + (postal ? ' postal' : '');
     el.innerHTML = `<div class="t1"></div>${sub ? '<div class="t2"></div>' : ''}`;
     el.querySelector('.t1')!.textContent = text;
     if (sub) el.querySelector('.t2')!.textContent = sub;
@@ -192,7 +229,11 @@ export class HUD {
       main = roadRef || roadName || 'Valle de Calamuchita';
       sub = roadRef && roadName && roadName !== roadRef ? roadName : town ? `cerca de ${town.town.name}` : 'Córdoba, Argentina';
     }
-    if (surface) sub += ` · ${SURFACE_LABEL[surface] ?? surface}`;
+    if (surface !== this.lastSurf) {
+      this.lastSurf = surface;
+      this.surf.classList.toggle('hidden', !surface);
+      if (surface) { this.surf.textContent = SURFACE_LABEL[surface] ?? surface; this.surf.dataset.s = surface; }
+    }
     const key = main + '|' + sub;
     if (key !== this.lastPlace) {
       this.lastPlace = key;
@@ -289,6 +330,11 @@ export class HUD {
       else if (e.key === 'Escape' && this.pick) this.cancelPick();
     });
     (this.root.querySelector('.bigmap-close') as HTMLElement).addEventListener('click', () => this.onClose?.());
+  }
+
+  /** Hay algo abierto que tapa el juego (mapa). */
+  get blocking(): boolean {
+    return this.mapOpen;
   }
 
   hideHelp(): void {

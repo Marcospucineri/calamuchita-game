@@ -11,8 +11,13 @@ const PORT = Number(process.env.PORT) || 8080;
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json',
   '.bin': 'application/octet-stream', '.wasm': 'application/wasm', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.ico': 'image/x-icon',
-  '.mp3': 'audio/mpeg', '.glb': 'model/gltf-binary',
+  '.mp3': 'audio/mpeg', '.glb': 'model/gltf-binary', '.webp': 'image/webp', '.woff2': 'font/woff2',
+  '.webmanifest': 'application/manifest+json', '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml',
 };
+// ya vienen comprimidos: no se pasan por gzip
+const PRECOMPRESSED = new Set(['.png', '.jpg', '.webp', '.woff2', '.mp3']);
+// archivos con hash de Vite, tipografías e ilustraciones: casi nunca cambian
+const longCache = (url) => /^\/(assets|fonts)\//.test(url) || /^\/(postales|brand)\//.test(url);
 const gzCache = new Map();
 // anotaciones del modo debug: en producción solo con DEBUG_TOKEN
 const notesApi = createNotesApi({
@@ -34,8 +39,9 @@ http.createServer((req, res) => {
   if (!file.startsWith(ROOT)) { res.writeHead(403).end(); return; }
   if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) file = path.join(ROOT, 'index.html');
   const ext = path.extname(file);
-  const headers = { 'Content-Type': TYPES[ext] || 'application/octet-stream', 'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=3600' };
-  if (/\bgzip\b/.test(req.headers['accept-encoding'] || '') && ext !== '.png' && ext !== '.jpg' && ext !== '.mp3') {
+  const cache = ext === '.html' ? 'no-cache' : url.startsWith('/assets/') ? 'public, max-age=31536000, immutable' : longCache(url) ? 'public, max-age=604800' : 'public, max-age=3600';
+  const headers = { 'Content-Type': TYPES[ext] || 'application/octet-stream', 'Cache-Control': cache };
+  if (/\bgzip\b/.test(req.headers['accept-encoding'] || '') && !PRECOMPRESSED.has(ext)) {
     let gz = gzCache.get(file);
     if (!gz) { gz = zlib.gzipSync(fs.readFileSync(file), { level: 6 }); gzCache.set(file, gz); }
     res.writeHead(200, { ...headers, 'Content-Encoding': 'gzip', 'Content-Length': gz.length });
@@ -44,4 +50,4 @@ http.createServer((req, res) => {
   }
   res.writeHead(200, headers);
   fs.createReadStream(file).pipe(res);
-}).listen(PORT, () => console.log(`Calamuchita en http://localhost:${PORT}`));
+}).listen(PORT, () => console.log(`Vallecito en http://localhost:${PORT}`));

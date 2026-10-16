@@ -3,13 +3,44 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>Calamuchita</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link href="https://fonts.googleapis.com/css2?family=Bitter:wght@500;700;800&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet" />
+    <title>Vallecito · Manejá el valle</title>
+    <meta name="description" content="Recorré el Valle de Calamuchita en un Fiat Uno o en avioneta y juntá las postales de Villa General Belgrano, Los Reartes y Villa Ciudad Parque. Gratis, en el navegador." />
+    <meta name="author" content="Marcos Pucineri · Valle Visual" />
+    <meta name="theme-color" content="#24452F" />
+    <meta name="color-scheme" content="dark" />
+    <link rel="canonical" href="https://vallecito.ar/" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/brand/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/brand/icon-192.png" />
+    <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Vallecito" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Vallecito" />
+    <meta property="og:locale" content="es_AR" />
+    <meta property="og:url" content="https://vallecito.ar/" />
+    <meta property="og:title" content="Vallecito · Manejá el valle" />
+    <meta property="og:description" content="Un paseo por el Valle de Calamuchita: manejá, volá y juntá las postales de cada lugar." />
+    <meta property="og:image" content="https://vallecito.ar/brand/og.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Vallecito: un Fiat Uno en una ruta de las sierras de Córdoba" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Vallecito · Manejá el valle" />
+    <meta name="twitter:description" content="Un paseo por el Valle de Calamuchita: manejá, volá y juntá las postales de cada lugar." />
+    <meta name="twitter:image" content="https://vallecito.ar/brand/og.jpg" />
+
+    <link rel="preload" href="/fonts/josefin-sans-700.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/brand/key-art.webp" as="image" type="image/webp" />
+    <style>html,body{margin:0;background:#10171A}</style>
   </head>
   <body>
     <canvas id="game"></canvas>
     <div id="ui"></div>
+    <noscript><p style="color:#F3E7C8;font-family:sans-serif;padding:24px">Vallecito necesita JavaScript para andar.</p></noscript>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

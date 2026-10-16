@@ -287,7 +287,7 @@ export class BigMapView {
     g.textBaseline = 'alphabetic';
     for (const t of this.w.meta.towns) {
       const [x, y] = S(t.x, t.n);
-      label(t.name, x, y - (zoomed > 3 ? 0 : 18), `800 ${zoomed > 3 ? 17 : 20}px Bitter, Georgia, serif`, zoomed > 3 ? 'rgba(90,44,24,0.55)' : '#5a2c18', 'rgba(255,248,230,0.85)', 5);
+      label(t.name, x, y - (zoomed > 3 ? 0 : 18), `800 ${zoomed > 3 ? 17 : 20}px "Josefin Sans", sans-serif`, zoomed > 3 ? 'rgba(90,44,24,0.55)' : '#5a2c18', 'rgba(255,248,230,0.85)', 5);
     }
     for (const p of this.w.pois) {
       const [x, y] = S(p.x, p.n);
@@ -297,14 +297,14 @@ export class BigMapView {
       g.strokeStyle = '#fff6e0';
       g.lineWidth = 2;
       g.beginPath(); g.arc(x, y, 5.5, 0, Math.PI * 2); g.fill(); g.stroke();
-      if (got) label(p.name, x, y - 9, '700 12px Nunito, sans-serif', '#2d2016', 'rgba(255,248,230,0.92)', 3.5);
+      if (got) label(p.name, x, y - 9, '700 12px "Josefin Sans", sans-serif', '#2d2016', 'rgba(255,248,230,0.92)', 3.5);
     }
     const af = getAirfield(this.w);
     {
       const [x, y] = S(af.x, af.n);
       g.fillStyle = '#355a2a'; g.strokeStyle = '#fff6e0'; g.lineWidth = 2;
       g.beginPath(); g.arc(x, y, 6.5, 0, Math.PI * 2); g.fill(); g.stroke();
-      label('Aeroclub de VGB', x, y - 11, '800 12px Nunito, sans-serif', '#2d2016', 'rgba(255,248,230,0.92)', 3.5);
+      label('Aeroclub de VGB', x, y - 11, '800 12px "Josefin Sans", sans-serif', '#2d2016', 'rgba(255,248,230,0.92)', 3.5);
     }
     this.overlay?.(g, S, MPP / s);
     // vos
@@ -314,7 +314,7 @@ export class BigMapView {
       g.beginPath(); g.arc(x, y, 15, 0, Math.PI * 2); g.fill();
       g.fillStyle = '#2d2016'; g.strokeStyle = '#fff6e0'; g.lineWidth = 3;
       g.beginPath(); g.arc(x, y, 8, 0, Math.PI * 2); g.fill(); g.stroke();
-      label('Vos', x, y - 14, '800 12px Nunito, sans-serif', '#2d2016', 'rgba(255,248,230,0.92)', 3.5);
+      label('Vos', x, y - 14, '800 12px "Josefin Sans", sans-serif', '#2d2016', 'rgba(255,248,230,0.92)', 3.5);
     }
     // destino elegido
     if (this.pin) {
@@ -335,7 +335,7 @@ export class BigMapView {
       g.strokeStyle = '#2d2016'; g.lineWidth = 2;
       g.beginPath(); g.moveTo(x0, y0 - 4); g.lineTo(x0, y0); g.lineTo(x0 + len, y0); g.lineTo(x0 + len, y0 - 4); g.stroke();
       g.textAlign = 'left';
-      label(nice >= 1000 ? `${nice / 1000} km` : `${nice} m`, x0, y0 - 7, '700 11px Nunito, sans-serif', '#2d2016', 'rgba(255,248,230,0.92)', 3);
+      label(nice >= 1000 ? `${nice / 1000} km` : `${nice} m`, x0, y0 - 7, '700 11px "Josefin Sans", sans-serif', '#2d2016', 'rgba(255,248,230,0.92)', 3);
     }
   }
 }

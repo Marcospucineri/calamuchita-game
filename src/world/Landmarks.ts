@@ -80,7 +80,7 @@ function halfTimberTexture(): THREE.CanvasTexture {
 }
 
 /** Texto pintado sobre ladrillo/revoque. */
-function textPlate(lines: string[], bg: string, fg: string, w = 512, h = 256, font = 'Bitter, Georgia, serif'): THREE.CanvasTexture {
+function textPlate(lines: string[], bg: string, fg: string, w = 512, h = 256, font = '"Josefin Sans", sans-serif'): THREE.CanvasTexture {
   const [c, g] = canvas(w, h);
   g.fillStyle = bg;
   g.fillRect(0, 0, w, h);
@@ -99,7 +99,7 @@ function textPlate(lines: string[], bg: string, fg: string, w = 512, h = 256, fo
 function arcLettersTexture(text: string, pxPerM: number, cx: number, cy: number, radius: number): THREE.CanvasTexture {
   const [c, g] = canvas(1024, 512);
   g.fillStyle = '#4a4f55';
-  g.font = `800 ${Math.round(0.62 * pxPerM)}px Bitter, Georgia, serif`;
+  g.font = `800 ${Math.round(0.62 * pxPerM)}px "Josefin Sans", sans-serif`;
   g.textAlign = 'center';
   g.textBaseline = 'middle';
   const chars = [...text];
@@ -122,7 +122,7 @@ function labelTexture(): THREE.CanvasTexture {
   g.fillStyle = '#b3261e';
   g.fillRect(0, 0, 512, 10);
   g.fillRect(0, 118, 512, 10);
-  g.font = '800 54px Bitter, Georgia, serif';
+  g.font = '800 54px "Josefin Sans", sans-serif';
   g.textAlign = 'center';
   g.textBaseline = 'middle';
   for (const x of [128, 384]) g.fillText('BIER', x, 66);
@@ -138,7 +138,7 @@ function signBoard(text: string): THREE.CanvasTexture {
   g.lineWidth = 8;
   g.strokeRect(4, 4, 504, 152);
   g.fillStyle = '#f3e6c4';
-  g.font = '700 58px Bitter, Georgia, serif';
+  g.font = '700 58px "Josefin Sans", sans-serif';
   g.textAlign = 'center';
   g.textBaseline = 'middle';
   g.fillText(text, 256, 84);
@@ -805,8 +805,8 @@ function carvedTexture(text: string): THREE.CanvasTexture {
   g.strokeStyle = 'rgba(255,230,190,0.25)'; g.lineWidth = 3; g.strokeRect(24, 24, 976, 192);
   // letras: sombra del tallado + relleno oscuro
   let size = 140;
-  g.font = `900 ${size}px Bitter, Georgia, serif`;
-  while (g.measureText(text).width > 900 && size > 60) { size -= 4; g.font = `900 ${size}px Bitter, Georgia, serif`; }
+  g.font = `900 ${size}px "Josefin Sans", sans-serif`;
+  while (g.measureText(text).width > 900 && size > 60) { size -= 4; g.font = `900 ${size}px "Josefin Sans", sans-serif`; }
   g.textAlign = 'center'; g.textBaseline = 'middle';
   g.fillStyle = 'rgba(255,225,180,0.45)';
   g.fillText(text, 514, 128);

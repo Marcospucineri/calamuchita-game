@@ -159,7 +159,7 @@ export class Minimap {
     g.translate(R, R);
     g.rotate(heading - Math.PI / 2);
     g.fillStyle = '#7a2f1c';
-    g.font = '800 13px Nunito, sans-serif';
+    g.font = '800 13px "Josefin Sans", sans-serif';
     g.textAlign = 'center';
     g.textBaseline = 'middle';
     g.fillText('N', 0, -(R - 14));
