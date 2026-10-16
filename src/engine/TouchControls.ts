@@ -6,6 +6,8 @@
  * (queda la cruceta y acelerar/frenar, o saltar a pie).
  * Arrastrar sobre el resto de la pantalla mueve la cámara (lo maneja Input).
  */
+import { icon } from '../ui/Icons';
+
 export class TouchControls {
   readonly root: HTMLElement;
   stickX = 0;
@@ -22,7 +24,7 @@ export class TouchControls {
   private knob: HTMLElement;
 
   static isTouch(): boolean {
-    return window.matchMedia?.('(pointer: coarse)').matches || 'ontouchstart' in window;
+    return new URLSearchParams(location.search).get('touch') === '1' || window.matchMedia?.('(pointer: coarse)').matches || 'ontouchstart' in window;
   }
 
   constructor(parent: HTMLElement) {
@@ -39,8 +41,8 @@ export class TouchControls {
         </div>
         <button class="tb tb-action hidden" data-k="act">Bajar</button>
         <div class="tb-pedals">
-          <button class="tb tb-brake" data-k="brake" aria-label="Frenar o marcha atrás">Freno</button>
-          <button class="tb tb-gas" data-k="gas" aria-label="Acelerar o saltar">Acelerar</button>
+          <button class="tb tb-brake" data-k="brake" aria-label="Frenar o marcha atrás">${icon('brake')}<span>Freno</span></button>
+          <button class="tb tb-gas" data-k="gas" aria-label="Acelerar o saltar">${icon('pedal')}<span>Acelerar</span></button>
         </div>
       </div>
       <button class="tb-toggle" aria-pressed="false" aria-label="Ocultar botones">▾ Ocultar</button>`;
@@ -157,10 +159,11 @@ export class TouchControls {
     for (const b of this.root.querySelectorAll('.tb-flight')) b.classList.toggle('hidden', !this.flying);
     if (this.flying) this.setAction(null);
     const gas = this.root.querySelector('[data-k="gas"]') as HTMLButtonElement;
-    gas.textContent = this.flying || this.driving ? 'Acelerar' : 'Saltar';
-    gas.setAttribute('aria-label', gas.textContent);
+    const label = this.flying || this.driving ? 'Acelerar' : 'Saltar';
+    gas.innerHTML = `${icon(this.flying || this.driving ? 'pedal' : 'jump')}<span>${label}</span>`;
+    gas.setAttribute('aria-label', label);
     const brake = this.root.querySelector('[data-k="brake"]') as HTMLButtonElement;
-    brake.textContent = this.flying ? 'Desacel.' : 'Freno';
+    brake.innerHTML = `${icon('brake')}<span>${this.flying ? 'Desacel.' : 'Freno'}</span>`;
     brake.setAttribute('aria-label', this.flying ? 'Desacelerar la avioneta' : 'Frenar o marcha atrás');
   }
 }

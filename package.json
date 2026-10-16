@@ -13,14 +13,20 @@
     "preview-map": "node tools/preview-map.mjs",
     "test:physics": "node tools/test-physics.mjs",
     "start": "node server.mjs",
-    "notes": "node --env-file-if-exists=.env tools/notes.mjs"
+    "notes": "node --env-file-if-exists=.env tools/notes.mjs",
+    "test:progress": "node tools/test-progress.mjs && node tools/test-cloud.mjs && node tools/test-hitchhikes.mjs",
+    "test:audio": "node tools/test-audio-focus.mjs",
+    "test:vehicle": "node tools/test-vehicle-visibility.mjs",
+    "test:avatar": "node tools/test-avatar.mjs"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.21.0",
+    "@supabase/supabase-js": "^2.118.0",
     "mongodb": "^6.21.0",
     "three": "^0.186.1"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.10",
     "@types/three": "^0.186.0",
     "pngjs": "^7.0.0",
     "typescript": "^7.0.2",

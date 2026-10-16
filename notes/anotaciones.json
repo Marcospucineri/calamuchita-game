@@ -1,6 +1,6 @@
 {
   "_info": "Copia de las anotaciones de MongoDB (npm run notes). No editar a mano: marcá con \"node tools/notes.mjs done\".",
-  "syncedAt": "2026-10-15T00:36:10.465Z",
+  "syncedAt": "2026-10-16T18:55:33.094Z",
   "notes": [
     {
       "id": "6ad01f6a8d9a16f5d20e5cb9",
@@ -35,9 +35,11 @@
         "yaw": -0.98,
         "pitch": -0.92
       },
-      "status": "abierta",
+      "status": "procesada",
       "createdAt": "2026-10-15T00:33:46.485Z",
-      "updatedAt": "2026-10-15T00:33:46.485Z"
+      "updatedAt": "2026-10-15T01:11:59.897Z",
+      "processedAt": "2026-10-15T00:54:44.346Z",
+      "resolution": "Cartel de madera tallada PICO ALEMÁN en la cumbre, sobre dos troncos con techito, de frente a donde se marcó. (src/world/Landmarks.ts woodSign + MapEdits)"
     },
     {
       "id": "6ad01f3a8d9a16f5d20e5cb8",
@@ -72,9 +74,11 @@
         "yaw": 1.38,
         "pitch": -0.31
       },
-      "status": "abierta",
+      "status": "procesada",
       "createdAt": "2026-10-15T00:32:58.055Z",
-      "updatedAt": "2026-10-15T00:32:58.055Z"
+      "updatedAt": "2026-10-15T01:12:01.294Z",
+      "processedAt": "2026-10-15T00:54:44.656Z",
+      "resolution": "Virgen del Cerro: figura blanca de chapa de ~18 m (manto de dos paños en V, cuerpo al frente, corona de rayos de hierro) sobre un pircado de piedras, mirando al pueblo. (src/world/Landmarks.ts virgen)"
     },
     {
       "id": "6ad01e008d9a16f5d20e5cb7",
@@ -156,9 +160,11 @@
         "yaw": 3.07,
         "pitch": -0.72
       },
-      "status": "abierta",
+      "status": "procesada",
       "createdAt": "2026-10-15T00:27:44.805Z",
-      "updatedAt": "2026-10-15T00:27:44.805Z"
+      "updatedAt": "2026-10-15T01:12:01.370Z",
+      "processedAt": "2026-10-15T00:54:45.019Z",
+      "resolution": "Av. Comechingones: las casas del tramo marcado pasaron a locales comerciales (vidriera, toldo, cartel) y se completaron los terrenos vacíos con locales nuevos. (src/world/Shops.ts)"
     },
     {
       "id": "6ad01de08d9a16f5d20e5cb6",
@@ -193,9 +199,11 @@
         "yaw": -0.54,
         "pitch": -0.74
       },
-      "status": "abierta",
+      "status": "procesada",
       "createdAt": "2026-10-15T00:27:12.378Z",
-      "updatedAt": "2026-10-15T00:27:12.378Z"
+      "updatedAt": "2026-10-15T01:12:01.445Z",
+      "processedAt": "2026-10-15T00:54:45.356Z",
+      "resolution": "Textura rota (en todo el mapa): el terreno asomaba entre vértices de las calles. Se agregan vértices cada 2 m donde el terreno se abomba, se levanta la cinta donde se curva a lo ancho y se ponen placas de pavimento en los ~2000 cruces y en curvas cerradas; sin líneas pintadas donde dos calzadas se pisan. (src/world/Roads.ts)"
     },
     {
       "id": "6ad01dc48d9a16f5d20e5cb5",
@@ -342,9 +350,11 @@
         "yaw": -0.54,
         "pitch": -0.74
       },
-      "status": "abierta",
+      "status": "procesada",
       "createdAt": "2026-10-15T00:26:44.497Z",
-      "updatedAt": "2026-10-15T00:26:44.497Z"
+      "updatedAt": "2026-10-15T01:12:01.521Z",
+      "processedAt": "2026-10-15T00:54:45.713Z",
+      "resolution": "Plaza principal de VGB: sin casas, pasto, caminito por el medio con cruce central, 8 canteros con flores, 8 bancos, 6 faroles y ~22 árboles (pinos y comunes). (src/world/MapEdits.ts + Landmarks.ts plazaPoly)"
     },
     {
       "id": "6ad01d848d9a16f5d20e5cb4",
@@ -426,9 +436,11 @@
         "yaw": -2.05,
         "pitch": -0.54
       },
-      "status": "abierta",
+      "status": "procesada",
       "createdAt": "2026-10-15T00:25:40.788Z",
-      "updatedAt": "2026-10-15T00:25:40.788Z"
+      "updatedAt": "2026-10-15T01:12:01.590Z",
+      "processedAt": "2026-10-15T00:54:46.077Z",
+      "resolution": "Av. Ojo de Agua: en el tramo marcado, una de cada dos casas que dan a la avenida es un local comercial común. (src/world/Shops.ts)"
     },
     {
       "id": "6ad01d4b8d9a16f5d20e5cb3",
@@ -463,9 +475,11 @@
         "yaw": 2.88,
         "pitch": -1.12
       },
-      "status": "abierta",
+      "status": "procesada",
       "createdAt": "2026-10-15T00:24:43.966Z",
-      "updatedAt": "2026-10-15T00:24:43.966Z"
+      "updatedAt": "2026-10-15T01:12:01.666Z",
+      "processedAt": "2026-10-15T00:54:46.435Z",
+      "resolution": "Pileta municipal: solado, pileta de 25 m con andariveles, pelopincho, vestuarios con techo de teja, sombrillas, cerco verde con entrada y cartel; separada de la calle detrás de la vereda. (src/world/Landmarks.ts pileta)"
     },
     {
       "id": "6ad015bf4c4045906f7073f6",
@@ -547,11 +561,11 @@
         "yaw": 0,
         "pitch": -0.62
       },
-      "status": "abierta",
+      "status": "procesada",
       "createdAt": "2026-10-14T23:52:31.072Z",
-      "updatedAt": "2026-10-15T00:35:59.355Z",
-      "processedAt": null,
-      "resolution": null
+      "updatedAt": "2026-10-15T01:12:01.742Z",
+      "processedAt": "2026-10-15T00:54:46.796Z",
+      "resolution": "Boulevard: el cantero ahora tiene pocos árboles, pinos intercalados con árboles comunes cada ~21 m y con huecos; las veredas siguen con árboles comunes. (src/world/MapEdits.ts)"
     },
     {
       "id": "6ad0155f4c4045906f7073f5",

@@ -1,3 +1,5 @@
+import { bindAudioFocus } from '../engine/AudioFocus';
+
 /**
  * Sonido de motor sintetizado con WebAudio (sin archivos):
  * dos osciladores filtrados + ruido para el ripio y viento ambiente.
@@ -17,13 +19,9 @@ export class VehicleAudio {
     if (this.ctx) return;
     const ctx = new AudioContext();
     this.ctx = ctx;
-    // Safari/iOS: el audio arranca suspendido hasta un toque del usuario
-    if (ctx.state !== 'running') {
-      const resume = () => { ctx.resume(); if (ctx.state === 'running') ['pointerdown', 'keydown', 'touchend'].forEach((ev) => window.removeEventListener(ev, resume)); };
-      ['pointerdown', 'keydown', 'touchend'].forEach((ev) => window.addEventListener(ev, resume));
-    }
+    bindAudioFocus(ctx);
     this.master = ctx.createGain();
-    this.master.gain.value = 0.55;
+    this.master.gain.value = 0.22; // Motor y ambiente suaves, unos 8 dB menos.
     this.master.connect(ctx.destination);
 
     this.filter = ctx.createBiquadFilter();

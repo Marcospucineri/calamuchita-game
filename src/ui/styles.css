@@ -486,3 +486,51 @@ body.touch .vehicle-switch button { min-height: 40px; }
   .tb-extras { position: absolute; right: 100%; bottom: 0; margin-right: 12px; flex-direction: column; align-items: flex-end; }
   .toasts { bottom: auto; top: calc(12px + var(--safe-t)); width: min(420px, calc(100vw - 320px)); }
 }
+
+/* Perfil: papel crema, tinta pino y la moneda de las sierras. */
+.serrano-icon { width: 36px; height: 36px; flex-shrink: 0; }
+.profile-entry { display: flex; align-items: center; gap: 9px; width: 100%; padding: 9px 12px; background: var(--crema); color: var(--pino); border: 1px solid var(--crema-2); border-radius: var(--r-sm); font: 700 15px var(--f-sans); cursor: pointer; text-align: left; }
+.profile-entry .serrano-icon { width: 28px; height: 28px; }
+.profile-entry small { margin-left: auto; font-size: 12px; font-weight: 400; }
+.profile-layout { display: grid; grid-template-columns: 240px 1fr; gap: 28px; }
+.avatar-preview { align-self: start; text-align: center; background: var(--crema); border-radius: 50% 50% 12px 12px; padding: 18px 0; }
+.avatar-preview span { display: block; font-size: 13px; color: var(--ink-muted); padding: 0 12px; }
+.avatar-stage { min-height: 240px; display: grid; place-items: center; }
+.avatar-stage canvas { width: 240px; max-width: 100%; }
+.profile-form, .auth-form { display: grid; gap: 15px; }
+.profile-label { display: grid; gap: 7px; font-weight: 700; }
+.profile-label input, .profile-label select { width: 100%; min-height: 44px; border: 1px solid var(--ink-muted); border-radius: 7px; background: var(--papel); color: var(--ink); padding: 10px 12px; font: 400 16px var(--f-sans); touch-action: manipulation; user-select: text; -webkit-user-select: text; }
+.profile-swatches { border: 0; padding: 0; margin: 0; display: flex; gap: 12px; }
+.profile-swatches legend { margin-bottom: 8px; font-weight: 700; }
+.profile-swatches button { width: 40px; height: 40px; border-radius: 50%; background: var(--sw); border: 3px solid var(--papel); box-shadow: 0 0 0 1px var(--ink-muted); cursor: pointer; }
+.profile-swatches button[aria-pressed="true"] { outline: 3px solid var(--pino); outline-offset: 2px; }
+.profile-check { display: flex; gap: 8px; align-items: center; min-height: 32px; }
+.profile-check input { width: 20px; height: 20px; accent-color: var(--pino); }
+.profile-note { margin: 0; font-size: 13px; color: var(--ink-muted); }
+.serranos-summary { margin-top: 26px; padding: 22px 0; display: flex; align-items: start; gap: 14px; border-top: 1px solid var(--crema-2); border-bottom: 1px solid var(--crema-2); }
+.serranos-summary b { font: 400 25px var(--f-display); color: var(--pino); }
+.serranos-summary p, .account-section p { font-size: 15px; line-height: 1.5; margin: 8px 0 0; }
+.account-section { margin-top: 24px; }
+.account-section h3 { font: 400 26px var(--f-display); color: var(--pino); margin: 0 0 8px; }
+.account-actions { margin-top: 18px; }
+.auth-buttons { display: flex; flex-wrap: wrap; gap: 10px; }
+.text-button { background: none; border: 0; padding: 12px; color: var(--pino); text-decoration: underline; font: 400 15px var(--f-sans); cursor: pointer; }
+.hud-wallet { display: flex; align-items: center; gap: 7px; border: 1px solid var(--hud-line); border-radius: var(--r-sm); padding: 6px 10px; color: var(--on-dark); cursor: pointer; font: 600 14px var(--f-sans); }
+.hud-wallet .serrano-icon { width: 28px; height: 28px; }
+.hud-wallet b { font-family: var(--f-mono); }
+.ride-panel { position: absolute; top: calc(20px + var(--safe-t)); left: 50%; transform: translateX(-50%); width: min(360px, 40vw); color: var(--on-dark); border-radius: var(--r-md); padding: 13px 16px; pointer-events: auto; }
+.ride-panel p { margin: 0; font-size: 15px; line-height: 1.4; }
+.ride-panel .ride-actions { display: flex; gap: 8px; margin-top: 10px; }
+.ride-panel button { min-height: 40px; padding: 8px 12px; font-size: 14px; }
+.title-panel .profile-entry { margin-bottom: 14px; }
+@media (max-width: 680px) {
+  .profile-layout { grid-template-columns: 1fr; gap: 20px; }
+  .avatar-preview { display: flex; align-items: center; border-radius: var(--r-md); padding: 0; }
+  .avatar-stage { min-height: 150px; width: 150px; }
+  .avatar-stage canvas { width: 150px !important; height: 150px !important; }
+  .avatar-preview span { flex: 1; font: 400 22px var(--f-display); text-align: left; }
+  .ride-panel { top: auto; bottom: calc(180px + var(--safe-b)); width: min(340px, 85vw); }
+}
+.photo-sheet { display: grid; gap: 16px; }
+.photo-sheet img { display: block; max-width: 100%; max-height: 55vh; object-fit: contain; margin: auto; }
+.photo-sheet p { margin: 0; line-height: 1.5; }

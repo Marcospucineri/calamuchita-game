@@ -1,20 +1,35 @@
+import { bindAudioFocus } from './AudioFocus';
+
 /**
- * Música de fondo: tres temas en loop y silencio, se ciclan con N (o el botón "Música").
+ * Música de fondo: dos canciones en loop y silencio, se ciclan con N (o el botón "Música").
  * Cada tema se decodifica con WebAudio, se le recortan los silencios de los bordes y se
  * funde el final con el principio para que el loop no tenga corte. El volumen se iguala
  * entre temas para que todos suenen bajito, de fondo.
  */
 const TRACKS = [
-  { file: 'music/sound-effect-29.mp3', name: 'Tema 1' },
-  { file: 'music/sound-effect-641.mp3', name: 'Tema 2' },
-  { file: 'music/sound-effect-1467.mp3', name: 'Tema 3' },
+  { file: 'music/Vallecito.mp3', name: 'Vallecito' },
+  { file: 'music/Camino de Verano.mp3', name: 'Camino de Verano' },
 ];
-export const MUSIC_KEY = 'calamuchita.music';
+export const MUSIC_KEY = 'calamuchita.music.v2';
 const KEY = MUSIC_KEY;
 /** Nombres para el menú de opciones (el último es el silencio). */
 export const MUSIC_OPTIONS = [...TRACKS.map((t) => t.name), 'Sin música'];
-/** Nivel RMS al que se lleva cada tema (bajo: es música de fondo). */
-const TARGET_RMS = 0.07;
+/** Música suave de fondo, unos 9 dB por debajo del nivel anterior. */
+const TARGET_RMS = 0.025;
+
+export function readMusicIndex(): number {
+  try {
+    const stored = localStorage.getItem(KEY);
+    if (stored !== null) {
+      const index = Number(stored);
+      return Number.isInteger(index) && index >= 0 && index <= TRACKS.length ? index : 0;
+    }
+    // La lista anterior tenía tres temas: su índice 3 era «Sin música».
+    const index = localStorage.getItem('calamuchita.music') === '3' ? TRACKS.length : 0;
+    localStorage.setItem(KEY, String(index));
+    return index;
+  } catch { return 0; }
+}
 /** Duración del fundido entre el final y el principio del loop (s). */
 const SEAM = 0.6;
 const FADE = 1.4;
@@ -31,10 +46,7 @@ export class Music {
   index = 0;
 
   constructor() {
-    try {
-      const v = Number(localStorage.getItem(KEY));
-      if (Number.isInteger(v) && v >= 0 && v <= TRACKS.length) this.index = v;
-    } catch { /* sin almacenamiento */ }
+    this.index = readMusicIndex();
   }
 
   get label(): string {
@@ -45,19 +57,7 @@ export class Music {
     if (this.ctx) return;
     const ctx = new AudioContext();
     this.ctx = ctx;
-    if (ctx.state !== 'running') {
-      const resume = () => {
-        if (document.hidden) return;
-        ctx.resume();
-        if (ctx.state === 'running') ['pointerdown', 'keydown', 'touchend'].forEach((ev) => window.removeEventListener(ev, resume));
-      };
-      ['pointerdown', 'keydown', 'touchend'].forEach((ev) => window.addEventListener(ev, resume));
-    }
-    // con la pestaña oculta no suena
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) ctx.suspend();
-      else ctx.resume();
-    });
+    bindAudioFocus(ctx);
     this.master = ctx.createGain();
     this.master.gain.value = 1;
     this.master.connect(ctx.destination);
@@ -114,7 +114,7 @@ export class Music {
     let p = this.loops.get(i);
     if (!p) {
       const ctx = this.ctx!;
-      p = fetch(import.meta.env.BASE_URL + TRACKS[i].file)
+      p = fetch(import.meta.env.BASE_URL + TRACKS[i].file.split('/').map(encodeURIComponent).join('/'))
         .then((r) => {
           if (!r.ok) throw new Error(r.statusText);
           return r.arrayBuffer();

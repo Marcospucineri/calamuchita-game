@@ -54,6 +54,7 @@ export class Vehicle {
   /** Materiales de la chapa: base, tapas más claras y nervios más oscuros. */
   private bodyMats: { paint: THREE.MeshToonMaterial; light: THREE.MeshToonMaterial; shade: THREE.MeshToonMaterial } | null = null;
   private interior: THREE.Group | null = null;
+  private windowMeshes: THREE.Mesh[] = [];
   /** Ojos del conductor en coordenadas del auto (X adelante, Z a la derecha; volante a la izquierda). */
   readonly driverEye = new THREE.Vector3(-0.3, 1.1, -0.36);
   private steer = 0;
@@ -123,9 +124,12 @@ export class Vehicle {
     this.snapshot();
   }
 
+  paint: CarPaint = 'arena';
+
   /** Cambia el color de la chapa. */
   setPaint(id: CarPaint): void {
     const def = CAR_PAINTS.find((p) => p.id === id) ?? CAR_PAINTS[0];
+    this.paint = def.id;
     const m = this.bodyMats;
     if (!m) return;
     const base = new THREE.Color(def.paint);
@@ -163,6 +167,8 @@ export class Vehicle {
       geo.computeVertexNormals();
       const mesh = new THREE.Mesh(geo, material);
       mesh.castShadow = false;
+      mesh.name = 'Vidrio exterior';
+      this.windowMeshes.push(mesh);
       g.add(mesh);
     };
 
@@ -299,9 +305,10 @@ export class Vehicle {
     this.interior = inside;
   }
 
-  /** Primera persona: muestra el tablero, el volante y el techo por dentro. */
+  /** El vidrio pintado es opaco desde afuera; dentro de la cabina deja libre la vista. */
   setInterior(on: boolean): void {
-    if (this.interior && this.interior.visible !== on) this.interior.visible = on;
+    if (this.interior) this.interior.visible = on;
+    for (const window of this.windowMeshes) window.visible = !on;
   }
 
   private snapshot(): void {

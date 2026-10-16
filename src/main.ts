@@ -1,4 +1,5 @@
 import './ui/styles.css';
+import './ui/chrome.css';
 import { QualityLevel } from './core/Config';
 import { Game } from './core/Game';
 import { Physics } from './engine/Physics';
@@ -8,16 +9,23 @@ import { SaveSystem } from './gameplay/SaveSystem';
 import { CAR_PAINTS, CarPaint } from './player/Vehicle';
 import { WorldData } from './world/WorldData';
 import { overlays } from './ui/Overlays';
-import { MUSIC_KEY, MUSIC_OPTIONS } from './engine/Music';
+import { accounts } from './services/Accounts';
+import { analytics } from './services/Analytics';
+import { newProgress, normalizeProfile, postalRewards, tripReward } from './gameplay/Progress';
+import { icon as lineIcon } from './ui/Icons';
+import { openProfile } from './ui/Profile';
+import routes from './gameplay/routes.json';
+import { MUSIC_KEY, MUSIC_OPTIONS, readMusicIndex } from './engine/Music';
 
 guardBrowserGestures();
+analytics.init();
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const ui = document.getElementById('ui') as HTMLElement;
 
 const QKEY = 'calamuchita.quality';
 const PKEY = 'calamuchita.carPaint';
 const params = new URLSearchParams(location.search);
-const save = SaveSystem.load();
+let save = SaveSystem.load();
 let vehicle: 'car' | 'plane' = params.get('vehicle') === 'plane' ? 'plane' : params.get('vehicle') === 'car' ? 'car' : save?.vehicle ?? 'car';
 let quality: QualityLevel = TouchControls.isTouch() ? 'baja' : 'media';
 try {
@@ -38,10 +46,12 @@ title.innerHTML = `
   <div class="title-layout">
     <header class="title-brand">
       <h1 style="margin:0"><img class="title-logo" src="${import.meta.env.BASE_URL}brand/logo.webp" alt="Vallecito" width="1000" height="442"></h1>
-      <p class="title-tag">Manejá el valle.</p>
+      <p class="title-tag">Recorré el valle.</p>
     </header>
+    <div class="title-dock">
     <section class="title-panel" aria-label="Empezar">
-      <span class="label edition">Valle de Calamuchita · Córdoba</span>
+      <div class="title-place">${lineIcon('pin')}<span class="label edition">Valle de Calamuchita · Córdoba</span></div>
+      <button class="profile-entry" type="button" disabled>${lineIcon('person')}<span>Tu personaje</span><span aria-hidden="true">›</span></button>
       <div class="choose">
         <div class="seg vehicle-choice" role="group" aria-label="Elegí tu vehículo">
           <button data-vehicle="car" aria-pressed="true" disabled><img alt="" src="${icon('auto')}">Auto</button>
@@ -53,17 +63,21 @@ title.innerHTML = `
         </div>
         <div class="departure-note hidden">La avioneta sale siempre del Aeroclub de Villa General Belgrano.</div>
       </div>
-      <div class="load"><div class="load-bar"><i></i></div><div class="load-label">Preparando el valle…</div></div>
-      <div class="title-actions">
-        <button class="btn btn-primary play" disabled>Cargando…</button>
+      <div class="load">
+        <div class="load-bar"><i></i></div>
+        <div class="departure-summary">${lineIcon('road')}<div><div class="load-label" role="status">Preparando el valle…</div><div class="load-detail"></div></div></div>
       </div>
-      <nav class="title-links" aria-label="Más">
-        <button data-l="album" disabled>Postales</button>
-        <button data-l="options">Opciones</button>
-        <button data-l="controls">Controles</button>
-        <button data-l="credits">Créditos</button>
-      </nav>
+      <div class="title-actions">
+        <button class="btn btn-primary play" disabled><span>Cargando…</span></button>
+      </div>
     </section>
+      <nav class="title-links" aria-label="Más">
+        <button data-l="album" disabled>${lineIcon('postal')}<span>Postales</span></button>
+        <button data-l="options">${lineIcon('options')}<span>Opciones</span></button>
+        <button data-l="controls">${lineIcon('controls')}<span>Controles</span></button>
+        <button data-l="credits">${lineIcon('star')}<span>Créditos</span></button>
+      </nav>
+    </div>
   </div>`;
 document.body.appendChild(title);
 const bar = title.querySelector('.load-bar i') as HTMLElement;
@@ -81,14 +95,13 @@ for (const b of title.querySelectorAll<HTMLButtonElement>('.title-links button')
     else if (l === 'controls') overlays.openControls(TouchControls.isTouch());
     else if (l === 'album' && worldReady) overlays.openAlbum({ pois: worldReady.pois, towns: worldReady.meta.towns, discovered: new Set(save?.discovered ?? []) });
     else if (l === 'options') {
-      let musicIndex = 0;
-      try { musicIndex = Number(localStorage.getItem(MUSIC_KEY)) || 0; } catch { /* sin almacenamiento */ }
+      const musicIndex = readMusicIndex();
       overlays.openOptions({
         inGame: false,
         quality,
         setQuality: (q) => { quality = q as QualityLevel; try { localStorage.setItem(QKEY, quality); } catch { /* nada */ } },
         music: { options: MUSIC_OPTIONS, index: musicIndex, set: (i) => { try { localStorage.setItem(MUSIC_KEY, String(i)); } catch { /* nada */ } } },
-        onRestart: save ? () => startGame?.(true) : undefined,
+        onRestart: save && !accounts.user ? () => startGame?.(true) : undefined,
       });
     }
   });
@@ -127,19 +140,41 @@ async function boot(): Promise<void> {
     const [world] = await Promise.all([
       WorldData.load('./world/', (p, l) => { bar.style.width = `${Math.round(p * 85)}%`; label.textContent = l + '…'; }),
       Physics.init(),
+      accounts.init(),
       // los carteles del mundo se pintan con la tipografía: tiene que estar cargada antes
       document.fonts?.load('700 32px "Josefin Sans"').catch(() => null),
       document.fonts?.load('400 32px "Berkshire Swash"').catch(() => null),
     ]);
     worldReady = world;
+    save = SaveSystem.load();
+    if (!params.has('vehicle')) vehicle = save?.vehicle ?? vehicle;
+    if (CAR_PAINTS.some((p) => p.id === save?.paint)) { paint = save!.paint as CarPaint; markPaint(); }
+    const profileButton = title.querySelector<HTMLButtonElement>('.profile-entry')!;
+    const updateProfileButton = () => { profileButton.querySelector('span')!.textContent = save?.progress?.profile.name ?? 'Tu personaje'; };
+    const editProfile = () => {
+      const progress = save?.progress ?? newProgress();
+      const balance = accounts.balance ?? postalRewards(world.pois, save?.discovered ?? []) + progress.trips.reduce((sum, t) => sum + tripReward(routes.find((r) => r.id === t.routeId)?.distance ?? 0), 0) + new Set(progress.photos ?? []).size * 10;
+      openProfile(normalizeProfile(progress.profile), balance, (profile) => {
+        progress.profile = profile;
+        const st = world.meta.start;
+        save = { version: 1, mode: 'driving', car: { ...st }, player: { x: st.x, n: st.n }, discovered: [], ...save, savedAt: Date.now(), vehicle, paint, progress };
+        SaveSystem.save(save); void accounts.sync(save); updateProfileButton();
+      });
+    };
+    profileButton.disabled = false;
+    profileButton.addEventListener('click', editProfile);
+    updateProfileButton();
+    if (accounts.recovery || accounts.authError) editProfile();
+    accounts.onChange(() => { if (accounts.recovery && !overlays.isOpen) editProfile(); });
     bar.style.width = '100%';
+    title.classList.add('is-ready');
     const found = save?.discovered.length ?? 0;
     const refreshDeparture = () => {
       markVehicle();
       label.textContent = vehicle === 'plane' ? 'La avioneta te espera en la pista del aeroclub.'
-        : save ? `Tu auto te espera donde lo dejaste · ${found} de ${world.pois.length} postales`
-        : `Listo. ${world.pois.length} postales te esperan en el valle.`;
-      play.textContent = vehicle === 'plane' ? 'Ir a la pista' : save ? 'Seguir paseando' : 'Arrancar';
+        : save ? 'Tu auto te espera donde lo dejaste' : 'El valle te espera';
+      title.querySelector('.load-detail')!.textContent = `${found} de ${world.pois.length} postales`;
+      play.innerHTML = `<span>${vehicle === 'plane' ? 'Ir a la pista' : save ? 'Seguir paseando' : 'Arrancar'}</span>${lineIcon('arrow')}`;
     };
     vButtons.forEach((b) => b.addEventListener('click', () => {
       vehicle = b.dataset.vehicle as 'car' | 'plane';
@@ -160,11 +195,12 @@ async function boot(): Promise<void> {
       setTimeout(async () => {
         try {
           if (fresh) SaveSystem.clear();
-          const game = new Game(world, canvas, ui, quality, fresh ? null : save, vehicle);
+          const game = new Game(world, canvas, ui, quality, fresh ? null : SaveSystem.load(), vehicle);
           game.player.car.setPaint(paint);
           label.textContent = 'Pintando el valle…';
           await game.warmup();
           game.start();
+          analytics.event('game_start', { vehicle, quality });
           // ?debug: modo dios y anotaciones (se baja aparte; no pesa en el juego normal)
           if (params.has('debug')) import('./debug/Debug').then((m) => m.installDebug(game)).catch((e) => console.error('No se pudo cargar el modo debug', e));
           title.classList.add('out');

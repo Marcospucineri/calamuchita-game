@@ -64,9 +64,15 @@ Al volver al auto, lo encontrás donde lo habías dejado. Se conservan las posta
 
 En celular, usá el joystick para girar y los botones **Acelerar**, **Desacel.**, **Subir**, **Bajar** y **Aeroclub** para volar.
 
-La partida se guarda sola en el navegador (vehículo elegido, posición del auto y postales descubiertas). La avioneta vuelve al aeroclub al cargar; no se retoma en el aire. «Borrar la partida y empezar» también borra las postales.
+La partida se guarda sola en el navegador y, al crear una cuenta, también en Supabase. Incluye nombre, aspecto, vehículo, posición del auto, postales y Serranos. Abrí el perfil desde el inicio o tocando la moneda durante el paseo. La avioneta vuelve al aeroclub al cargar; no se retoma en el aire. «Borrar la partida y empezar» también borra las postales.
 
 Para probar el vuelo directamente: `http://localhost:5173/?auto=1&vehicle=plane` (agregá `&fresh=1` para borrar la partida).
+
+## Cuentas, pasajeros y Serranos
+
+Podés personalizar tu personaje, llevar gente que hace dedo a destinos del valle y compartir fotos desde el menú de pausa. Ganás 50 Serranos por postal, 200 por completar un pueblo, 20–60 por traslado y 10 por la primera foto compartida del día. La moneda tiene una montaña; la tienda queda para más adelante. Mate y cerveza todavía no se implementan.
+
+Configuración de Supabase, Analytics, migración y pruebas: [cuentas y Serranos](docs/cuentas-y-serranos.md). Analytics queda preparado sin ID hasta configurar GA4.
 
 ## Qué hay en esta versión
 

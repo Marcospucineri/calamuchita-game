@@ -1,0 +1,110 @@
+[
+  {
+    "id": "dedo-1",
+    "name": "Luz",
+    "from": "Portal de VGB",
+    "destination": "Castillo Romano",
+    "x": 716,
+    "n": -513,
+    "heading": 1.3339475658479782,
+    "destX": 234,
+    "destN": -18,
+    "distance": 696
+  },
+  {
+    "id": "dedo-2",
+    "name": "Ariel",
+    "from": "Villa General Belgrano",
+    "destination": "Mirador",
+    "x": 21,
+    "n": -5,
+    "heading": 1.3503025654282248,
+    "destX": 1290,
+    "destN": -446,
+    "distance": 1339
+  },
+  {
+    "id": "dedo-3",
+    "name": "Cruz",
+    "from": "Los Reartes",
+    "destination": "Balneario Villa Ciudad Parque",
+    "x": -1993,
+    "n": 6802,
+    "heading": 1.5507989928217643,
+    "destX": -536,
+    "destN": 8298,
+    "distance": 2084
+  },
+  {
+    "id": "dedo-4",
+    "name": "Dani",
+    "from": "Villa Ciudad Parque",
+    "destination": "Comuna Los Reartes",
+    "x": 1502,
+    "n": 7605,
+    "heading": -0.28379410920826054,
+    "destX": -1701,
+    "destN": 6200,
+    "distance": 3495
+  },
+  {
+    "id": "dedo-5",
+    "name": "Alex",
+    "from": "Barril Cervezero",
+    "destination": "Dei lavender",
+    "x": 6,
+    "n": 45,
+    "heading": -2.344430327042586,
+    "destX": 2003,
+    "destN": 2378,
+    "distance": 3070
+  },
+  {
+    "id": "dedo-6",
+    "name": "Fran",
+    "from": "Balneario",
+    "destination": "Corral de Piedras Año 1780",
+    "x": -1443,
+    "n": 6156,
+    "heading": 1.469107475031831,
+    "destX": -2093,
+    "destN": 6602,
+    "distance": 792
+  },
+  {
+    "id": "dedo-7",
+    "name": "René",
+    "from": "Balneario El Aguacero",
+    "destination": "Balneario",
+    "x": -2703,
+    "n": 5453,
+    "heading": 2.7945310500503244,
+    "destX": -1439,
+    "destN": 6156,
+    "distance": 1443
+  },
+  {
+    "id": "dedo-8",
+    "name": "Sol",
+    "from": "Balneario El Puente",
+    "destination": "Balneario Villa Ciudad Parque",
+    "x": -867,
+    "n": 10611,
+    "heading": -0.03997868712343532,
+    "destX": -536,
+    "destN": 8298,
+    "distance": 2332
+  },
+  {
+    "id": "dedo-9",
+    "name": "Paz",
+    "from": "Balneario Villa Ciudad Parque",
+    "destination": "Balneario El Aguacero",
+    "x": -531,
+    "n": 8298,
+    "heading": -1.4876550949064553,
+    "destX": -2701,
+    "destN": 5457,
+    "distance": 3572
+  }
+]

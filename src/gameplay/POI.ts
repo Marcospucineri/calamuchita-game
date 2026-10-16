@@ -56,6 +56,15 @@ export class POIs {
     }
   }
 
+  /** Cloud discoveries arrive silently: their rewards were already recorded. */
+  restore(saved: string[]): void {
+    for (const id of saved) {
+      if (!this.markers.has(id)) continue;
+      this.discovered.add(id);
+      this.markers.get(id)!.visible = false;
+    }
+  }
+
   get total(): number {
     return this.w.pois.length;
   }

@@ -6,6 +6,12 @@ import { Input, InputState } from '../engine/Input';
 import { Physics, RAPIER } from '../engine/Physics';
 import { Renderer } from '../engine/Renderer';
 import { POIs } from '../gameplay/POI';
+import { accounts } from '../services/Accounts';
+import { analytics } from '../services/Analytics';
+import { newProgress, normalizeProfile, postalRewards, type Progress } from '../gameplay/Progress';
+import { Hitchhikers } from '../gameplay/Hitchhikers';
+import { openPhoto } from '../ui/Photo';
+import { openProfile, serranoIcon } from '../ui/Profile';
 import { SaveData, SaveSystem } from '../gameplay/SaveSystem';
 import { CameraRig } from '../player/CameraRig';
 import { Character } from '../player/Character';
@@ -55,9 +61,19 @@ export class Game {
   private time = 0;
   private saveTimer = 0;
   private miniZoom = 1;
+  readonly progress: Progress;
+  readonly hitchhikers: Hitchhikers;
+  private wallet: HTMLButtonElement;
+  private ridePanel: HTMLElement;
+  private accountOffered = false;
+  private playedSeconds = 0;
+  private minutesReported = 0;
   debug: GameDebug | null = null;
 
   constructor(readonly world: WorldData, canvas: HTMLCanvasElement, uiRoot: HTMLElement, readonly quality: QualityLevel, save: SaveData | null, vehicle: VehicleChoice = save?.vehicle ?? 'car') {
+    this.progress = save?.progress ?? newProgress();
+    this.progress.profile = normalizeProfile(this.progress.profile);
+    this.progress.trips ??= [];
     prepareAirfield(world);
     // correcciones del mapa que salieron de las anotaciones del modo debug
     const tEdits = performance.now();
@@ -101,6 +117,7 @@ export class Game {
     const carX = save?.car.x ?? st.x, carN = save?.car.n ?? st.n, carH = save?.car.heading ?? st.heading;
     const car = new Vehicle(this.physics, world, scene, new THREE.Vector3(carX, world.heightAt(carX, carN) + 1, -carN), carH);
     const person = new Character(this.physics, scene);
+    person.setAppearance(this.progress.profile.appearance);
     const plane = new Aircraft(world, scene, this.physics, getAirfield(world).spawn);
     this.player = new PlayerController(car, person, this.physics, world, plane);
     this.cameraRig = new CameraRig(this.renderer.camera, world);
@@ -135,6 +152,62 @@ export class Game {
     this.hud = new HUD(world, uiRoot);
     lap('hud');
     this.pois = new POIs(world, scene, save?.discovered ?? []);
+    this.hitchhikers = new Hitchhikers(world, scene, this.progress);
+    this.hitchhikers.onChange = () => { this.updateWallet(); this.save(); };
+    this.wallet = document.createElement('button');
+    this.wallet.className = 'hud-wallet glass';
+    this.wallet.innerHTML = `${serranoIcon}<b>0</b><span class="wallet-label">Serranos</span>`;
+    this.wallet.setAttribute('aria-label', 'Tu perfil y Serranos');
+    this.wallet.addEventListener('click', () => this.openProfile());
+    this.hud.root.querySelector('.hud-tl')!.appendChild(this.wallet);
+    this.ridePanel = document.createElement('div');
+    this.ridePanel.className = 'ride-panel glass hidden';
+    this.ridePanel.innerHTML = '<p></p><div class="ride-actions"><button class="btn btn-primary ride-pickup">Acercarle</button><button class="btn btn-light ride-map">Ver destino</button><button class="btn btn-light ride-cancel">Cancelar viaje</button></div>';
+    this.hud.root.appendChild(this.ridePanel);
+    this.ridePanel.querySelector('.ride-pickup')!.addEventListener('click', () => { if (this.player.driving && Math.abs(this.player.car.speed) < 1.5) this.hitchhikers.pickup(); });
+    this.ridePanel.querySelector('.ride-map')!.addEventListener('click', () => {
+      this.toggleMap();
+      const r = this.hitchhikers.active;
+      if (r) this.hud.mapView.centerOn(r.destX, r.destN, 3);
+    });
+    this.ridePanel.querySelector('.ride-cancel')!.addEventListener('click', () => this.hitchhikers.cancel());
+    this.hud.mapView.overlay = (g, project) => {
+      const r = this.hitchhikers.active;
+      if (!r) return;
+      const [x, y] = project(r.destX, r.destN);
+      g.fillStyle = '#e0a83a'; g.strokeStyle = '#24452f'; g.lineWidth = 3;
+      g.beginPath(); g.arc(x, y, 10, 0, Math.PI * 2); g.fill(); g.stroke();
+      g.font = '700 14px "Josefin Sans"'; g.textAlign = 'center';
+      g.lineWidth = 4; g.strokeStyle = '#fbf5e6'; g.strokeText(`Dejar a ${r.name}: ${r.destination}`, x, y - 20);
+      g.fillStyle = '#24452f'; g.fillText(`Dejar a ${r.name}: ${r.destination}`, x, y - 20);
+    };
+    this.updateWallet();
+    accounts.onChange(() => {
+      if (accounts.user && accounts.status === 'Progreso guardado en tu cuenta') {
+        const cloud = SaveSystem.load();
+        if (cloud) {
+          this.pois.restore(cloud.discovered);
+          this.hud.setFound(this.pois.discovered.size);
+          const trips = [...this.progress.trips, ...(cloud.progress?.trips ?? [])];
+          this.progress.photos = [...new Set([...(this.progress.photos ?? []), ...(cloud.progress?.photos ?? [])])];
+          this.progress.trips = [...new Map(trips.map((trip) => [trip.id, trip])).values()];
+        }
+      }
+      this.updateWallet();
+    });
+    bus.on('poi:discovered', (e) => {
+      const total = postalRewards(world.pois, [...this.pois.discovered]);
+      const before = postalRewards(world.pois, [...this.pois.discovered].filter((id) => id !== e.id));
+      const value = total - before;
+      bus.emit('toast', { text: `+${value} Serranos`, sub: value > 50 ? 'Postal nueva y colección del pueblo completa' : 'Una postal más en tu recorrido' });
+      analytics.event('postal_found', { place_id: e.id, place: e.name });
+      analytics.event('earn_virtual_currency', { virtual_currency_name: 'Serranos', value, source: 'postal' });
+      this.updateWallet(); this.save();
+      if (e.found >= 3 && !accounts.user && !this.accountOffered) {
+        this.accountOffered = true;
+        bus.emit('toast', { text: 'Este valle ya tiene algo tuyo', sub: 'Abrí tu perfil desde los Serranos para crear una cuenta y guardar tus paseos.' });
+      }
+    });
     lap('pois');
     this.hud.setFound(this.pois.discovered.size);
     this.hud.setVehicle(vehicle);
@@ -211,6 +284,22 @@ export class Game {
     });
   }
 
+  private updateWallet(): void {
+    const balance = postalRewards(this.world.pois, [...this.pois.discovered]) + this.hitchhikers.balance() + new Set(this.progress.photos ?? []).size * 10;
+    this.wallet.querySelector('b')!.textContent = String(balance);
+  }
+
+  openProfile(): void {
+    this.save();
+    if (this.hud.isMapOpen) this.toggleMap();
+    const balance = postalRewards(this.world.pois, [...this.pois.discovered]) + this.hitchhikers.balance() + new Set(this.progress.photos ?? []).size * 10;
+    openProfile(this.progress.profile, balance, (profile) => {
+      this.progress.profile = profile;
+      this.player.person.setAppearance(profile.appearance);
+      this.save();
+    }, () => this.save());
+  }
+
   openOptions(): void {
     overlays.openOptions({
       inGame: true,
@@ -236,6 +325,9 @@ export class Game {
       { id: 'resume', label: 'Seguir paseando', primary: true },
       { id: 'album', label: `Postales · ${this.pois.discovered.size} de ${this.world.pois.length}`, icon: 'postal' },
       { id: 'map', label: 'Mapa y viaje rápido', icon: 'mapa' },
+      { id: 'photo', label: 'Foto del paseo · compartir', icon: 'modo-foto' },
+      { id: 'profile', label: 'Mi nombre, aspecto y cuenta' },
+      { id: 'vehicle', label: this.player.flying ? 'Volver al auto' : 'Volar en avioneta', icon: this.player.flying ? 'auto' : 'avioneta' },
       { id: 'options', label: 'Opciones' },
       { id: 'controls', label: 'Controles' },
       { id: 'credits', label: 'Créditos' },
@@ -244,6 +336,14 @@ export class Game {
       if (id === 'resume') { overlays.closeAll(); return; }
       if (id === 'map') { overlays.closeAll(); this.toggleMap(); return; }
       if (id === 'album') this.openAlbum();
+      else if (id === 'photo') {
+        const target = this.player.position;
+        const place = this.world.townAt(target.x, -target.z)?.town.name ?? 'Valle de Calamuchita';
+        this.renderer.render();
+        void openPhoto(this.renderer.renderer.domElement, place, this.progress, () => { this.updateWallet(); this.save(); });
+      }
+      else if (id === 'profile') this.openProfile();
+      else if (id === 'vehicle') { overlays.closeAll(); this.selectVehicle(this.player.flying ? 'car' : 'plane'); }
       else if (id === 'options') this.openOptions();
       else if (id === 'controls') overlays.openControls(!!this.input.touch);
       else if (id === 'credits') overlays.openCredits();
@@ -308,7 +408,20 @@ export class Game {
     this.physics.updateTrees(this.vegetation, target.x, -target.z);
     this.renderer.followShadow(target);
     this.sky.update(this.renderer.camera.position, this.time);
-    this.pois.update(dt, target.x, -target.z, driving || flying, flying ? target.y : undefined);
+    if (!this.paused) {
+      this.pois.update(dt, target.x, -target.z, driving || flying, flying ? target.y : undefined);
+      const ride = this.hitchhikers.update(dt, target.x, -target.z, speed, driving);
+      this.ridePanel.classList.toggle('hidden', !ride);
+      if (ride) this.ridePanel.querySelector('p')!.textContent = ride;
+      this.ridePanel.querySelector('.ride-pickup')!.classList.toggle('hidden', !!this.hitchhikers.active || !driving || Math.abs(speed) >= 1.5);
+      this.ridePanel.querySelector('.ride-map')!.classList.toggle('hidden', !this.hitchhikers.active);
+      this.ridePanel.querySelector('.ride-cancel')!.classList.toggle('hidden', !this.hitchhikers.active);
+      this.playedSeconds += dt;
+      if (Math.floor(this.playedSeconds / 60) > this.minutesReported) {
+        this.minutesReported = Math.floor(this.playedSeconds / 60);
+        analytics.event('play_time', { minutes: this.minutesReported, vehicle: p.vehicle });
+      }
+    }
 
     // HUD
     const heading = driving || flying ? Math.atan2(-forward.z, forward.x) : Math.atan2(Math.cos(this.cameraRig.yaw), -Math.sin(this.cameraRig.yaw)) ;
@@ -359,14 +472,19 @@ export class Game {
   save(): void {
     const p = this.player;
     const f = p.car.forward();
-    SaveSystem.save({
+    const data: SaveData = {
       version: 1,
+      savedAt: Date.now(),
       mode: p.flying ? 'flying' : p.driving ? 'driving' : 'onfoot',
       vehicle: p.vehicle,
       car: { x: p.car.position.x, n: -p.car.position.z, heading: Math.atan2(-f.z, f.x) },
       player: { x: p.person.position.x, n: -p.person.position.z },
       discovered: [...this.pois.discovered],
-    });
+      paint: p.car.paint,
+      progress: this.progress,
+    };
+    SaveSystem.save(data);
+    void accounts.sync(data);
   }
 
   /** Viaje rápido: aparece en la calle más cercana al punto elegido en el mapa, ya arriba del auto. */
@@ -375,6 +493,8 @@ export class Game {
       bus.emit('toast', { text: 'Explorá el valle volando', sub: 'Para viajar por tierra, elegí Auto. La avioneta sale desde el aeroclub.' });
       return;
     }
+    this.hitchhikers.cancel();
+    analytics.event('fast_travel', { place: label });
     let best: { px: number; pn: number; dirX: number; dirN: number; dist: number } | null = null;
     for (let r = 0; r <= 400 && !best; r += 40) {
       for (let a = 0; a < (r ? 16 : 1); a++) {
@@ -404,6 +524,7 @@ export class Game {
 
   selectVehicle(vehicle: VehicleChoice): void {
     if (vehicle === this.player.vehicle) return;
+    if (vehicle === 'plane') this.hitchhikers.cancel();
     this.player.selectVehicle(vehicle);
     this.hud.setVehicle(vehicle);
     const forward = vehicle === 'plane' ? this.player.plane.forward() : this.player.car.forward();

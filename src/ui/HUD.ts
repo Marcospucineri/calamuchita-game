@@ -1,3 +1,4 @@
+import { icon } from './Icons';
 import { bus } from '../core/EventBus';
 import { kindLabel } from '../gameplay/POI';
 import { getAirfield } from '../world/Airfield';
@@ -60,18 +61,14 @@ export class HUD {
     const ico = (n: string) => `${import.meta.env.BASE_URL}brand/iconos/${n}.webp`;
     this.root.innerHTML = `
       <div class="hud-tl">
-        <div class="place glass"><div class="place-name"></div><div class="place-sub"></div></div>
-        <div class="vehicle-switch glass" role="group" aria-label="Elegí tu vehículo">
-          <button data-vehicle="car" aria-pressed="true"><img alt="" src="${ico('auto')}">Auto</button>
-          <button data-vehicle="plane" aria-pressed="false"><img alt="" src="${ico('avioneta')}">Avioneta</button>
-        </div>
+        <div class="place glass">${icon('pin')}<div class="place-copy"><div class="place-name"></div><div class="place-sub"></div></div></div>
       </div>
       <div class="hud-tr">
         <div class="mini-wrap"></div>
         <div class="hud-btns">
-          <button class="hbtn glass" data-a="map" aria-label="Mapa (M)" title="Mapa (M)"><img alt="" src="${ico('mapa')}"></button>
+          <button class="hbtn glass" data-a="map" aria-label="Mapa (M)" title="Mapa (M)">${icon('map')}</button>
           <button class="hbtn glass postales" data-a="album" aria-label="Postales" title="Postales"><img alt="" src="${ico('postal')}"><span class="badge"><b>0</b>/<span>0</span></span></button>
-          <button class="hbtn glass" data-a="menu" aria-label="Menú (Esc)" title="Menú (Esc)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>
+          <button class="hbtn glass" data-a="menu" aria-label="Menú (Esc)" title="Menú (Esc)">${icon('menu')}</button>
         </div>
       </div>
       <div class="hud-bl">
@@ -80,7 +77,7 @@ export class HUD {
       </div>
       <div class="prompt glass hidden"></div>
       <div class="toasts" aria-live="polite"></div>
-      <div class="help glass">
+      <div class="help glass hidden">
         <h3>Para arrancar</h3>
         <ul>
           <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> manejar · <kbd>Espacio</kbd> freno de mano</li>
@@ -90,11 +87,6 @@ export class HUD {
       </div>
       <div class="bigmap hidden"><div class="bigmap-card"><div class="bigmap-head"><div><h2>Valle de Calamuchita</h2><span>Arrastrá para moverte, acercá con la rueda o dos dedos y tocá un punto para viajar</span></div><button class="bigmap-close" aria-label="Cerrar mapa">✕</button></div><div class="trips" aria-label="Viaje rápido"></div><div class="bigmap-body"><canvas aria-label="Mapa del valle"></canvas><a class="osm" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a><div class="map-zoom"><button data-z="in" aria-label="Acercar">+</button><button data-z="out" aria-label="Alejar">−</button><button data-z="me" aria-label="Centrar en tu posición">◎</button></div><div class="map-confirm hidden" role="group" aria-label="Confirmar viaje"><span></span><button class="go">Viajar</button><button class="cancel" aria-label="Cancelar">✕</button></div></div></div></div>
     `;
-    // en el celu la velocidad va debajo del nombre del lugar (abajo están los pedales)
-    if (document.body.classList.contains('touch')) {
-      const tl = this.root.querySelector('.hud-tl')!;
-      this.root.querySelectorAll('.hud-bl > *').forEach((n) => tl.appendChild(n));
-    }
     parent.appendChild(this.root);
     // La activación por teclado de los botones no debe accionar el vehículo.
     // Después de elegir con mouse/touch, Espacio vuelve a controlar el vehículo.
@@ -164,7 +156,7 @@ export class HUD {
         <li>Acelerá por la pista y tirá <kbd>↓</kbd> para despegar</li>
         <li><kbd>R</kbd> volver al aeroclub · <kbd>Esc</kbd> menú</li>
       </ul>` : this.carHelp;
-    this.help.classList.remove('faded');
+    this.help.classList.add('hidden');
     for (const b of this.root.querySelectorAll<HTMLButtonElement>('.ground-trip')) {
       b.classList.toggle('hidden', flying);
       b.disabled = flying;

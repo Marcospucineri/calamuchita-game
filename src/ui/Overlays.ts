@@ -102,7 +102,9 @@ export class Overlays {
         <dt>Ilustraciones</dt><dd>Postales, arte de tapa, logo e íconos: Valle Visual, generados con Magnific.</dd>
         <dt>Modelos 3D</dt><dd>Deck y locales de Las Magnolias: <a href="https://www.instagram.com/antooaleman/" target="_blank" rel="noopener">@antooaleman</a></dd>
         <dt>Mapa del valle</dt><dd>Calles, ríos, edificios y lugares: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">colaboradores de OpenStreetMap</a> (ODbL).<br>Relieve: Terrain Tiles de Mapzen en AWS Open Data (SRTM, GMTED y otros).</dd>
+        <dt>Música</dt><dd>Vallecito y Camino de Verano.</dd>
         <dt>Tipografías</dt><dd>Berkshire Swash, Josefin Sans y Overpass Mono (SIL Open Font License).</dd>
+        <dt>Privacidad</dt><dd>Sin cuenta, el progreso queda en este navegador. Con cuenta, Supabase guarda tu perfil, apariencia, postales, posición y Serranos para continuar desde otro dispositivo. Google Analytics, cuando está habilitado, mide partidas, minutos de juego, lugares descubiertos y actividades. No le enviamos tu nombre ni tu email. Respetamos la señal «No rastrear» del navegador. <a href="${asset('privacidad.html')}" target="_blank" rel="noopener">Política de privacidad</a>.</dd>
         <dt>Tecnología</dt><dd>three.js, Rapier y Vite.</dd>
       </dl>
       <div class="credits-foot">Hecho en el Valle de Calamuchita, Córdoba · <a href="${SITE_URL}" target="_blank" rel="noopener">vallecito.ar</a></div>`;
@@ -166,7 +168,7 @@ export class Overlays {
       ${o.onRestart ? `<div class="opt"><h4>Partida</h4><p>Borra las postales y la posición guardadas en este navegador.</p><button class="btn btn-light restart">Empezar de cero</button></div>` : ''}`;
     // la música en dos columnas: 4 opciones
     const segMusic = box.querySelector('[data-name="music"]') as HTMLElement;
-    segMusic.style.gridTemplateColumns = '1fr 1fr';
+    segMusic.style.gridTemplateColumns = 'repeat(3, minmax(0, 1fr))';
     const segCam = box.querySelector('[data-name="camera"]') as HTMLElement | null;
     if (segCam) segCam.style.gridTemplateColumns = '1fr 1fr';
     const initialQ = o.quality;
