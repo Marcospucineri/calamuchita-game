@@ -78,7 +78,7 @@ export class Online {
   }
 
   private connect(): void {
-    if (this.simulated || !this.enabled || !accounts.client || !accounts.user) return;
+    if (this.simulated || !this.enabled || !accounts.client) return;
     void this.net.start(accounts.client, this.look());
   }
 
@@ -106,7 +106,7 @@ export class Online {
     let why: string | null = null;
     if (!accounts.client) why = 'Sin conexión: el chat no está disponible.';
     else if (!accounts.user) {
-      bus.emit('toast', { text: 'Iniciá sesión para chatear', sub: 'Con tu cuenta de Google ves a otros jugadores y escribís en la sala.' });
+      bus.emit('toast', { text: 'Iniciá sesión para escribir', sub: 'Podés ver a los demás y leer el chat sin cuenta; para escribir necesitás ingresar.' });
       this.d.openProfile();
       return false;
     } else if (!this.enabled) why = 'El modo online está apagado. Podés activarlo en Opciones.';

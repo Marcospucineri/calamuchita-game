@@ -326,7 +326,7 @@ export class Game {
       setQuality: (q) => { try { localStorage.setItem('calamuchita.quality', q); } catch { /* sin almacenamiento */ } },
       onReload: () => { this.save(); location.reload(); },
       music: { options: MUSIC_OPTIONS, index: this.music.index, set: (i) => this.music.set(i) },
-      online: accounts.user ? { enabled: this.online.enabled, set: (on) => this.online.setEnabled(on) } : undefined,
+      online: accounts.client ? { enabled: this.online.enabled, set: (on) => this.online.setEnabled(on) } : undefined,
       camera: {
         views: VIEWS.map((v) => ({ id: v.id, label: v.label })),
         current: this.cameraRig.view,

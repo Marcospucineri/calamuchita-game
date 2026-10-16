@@ -17,9 +17,10 @@ try {
     create table realtime.messages(topic text, extension text);
     create function realtime.topic() returns text language sql as $$ select current_setting('realtime.topic', true) $$;
     alter table realtime.messages enable row level security;
-    grant usage on schema realtime to authenticated; grant usage on schema auth to authenticated; grant select, insert on realtime.messages to authenticated;`);
+    grant usage on schema realtime to authenticated; grant usage on schema auth to authenticated; grant select, insert on realtime.messages to authenticated, anon; grant usage on schema realtime to anon;`);
   await db.exec(fs.readFileSync('supabase/migrations/202610160001_progress.sql', 'utf8'));
   await db.exec(fs.readFileSync('supabase/migrations/202610160003_multiplayer_chat.sql', 'utf8'));
+  await db.exec(fs.readFileSync('supabase/migrations/202610160004_multiplayer_guests.sql', 'utf8'));
   await db.exec(`insert into auth.users values ('${uid}'),('${other}');
     insert into public.player_progress(user_id, save) values ('${uid}', '{"progress":{"profile":{"name":"  Luz  "}}}');
     grant usage on schema realtime to authenticated; grant select, insert on public.sent to authenticated; grant usage on all sequences in schema public to authenticated; grant usage on all sequences in schema realtime to authenticated;`);
@@ -73,6 +74,10 @@ try {
   assert.equal(await readable('vallecito:chat:1', 'broadcast'), 1, 'Chat: lectura permitida');
   assert.equal(await readable('vallecito:chat:1', 'presence'), 0, 'Chat: sin presencia');
   assert.equal(await readable('otro:canal', 'broadcast'), 0, 'Otros canales: bloqueados');
+  const guest = async (topic, ext) => { await db.exec(`set role postgres; set realtime.topic='${topic}'; set role anon;`); return (await db.query(`select 1 from realtime.messages where topic='${topic}' and extension='${ext}'`)).rows.length; };
+  assert.equal(await guest('vallecito:pos:1', 'broadcast'), 1, 'Invitados: ven posiciones');
+  assert.equal(await guest('vallecito:chat:1', 'broadcast'), 1, 'Invitados: leen el chat');
+  assert.equal(await guest('otro:canal', 'broadcast'), 0, 'Invitados: otros canales bloqueados');
   console.log('chat sql ok');
 } finally {
   await db.close();

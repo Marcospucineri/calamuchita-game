@@ -70,11 +70,11 @@ Para probar el vuelo directamente: `http://localhost:5173/?auto=1&vehicle=plane`
 
 ## Jugar con otros y chat
 
-Con una cuenta iniciada (Google o email) ves a otros jugadores en el valle y podés chatear. Es opcional: en Opciones → «Otros jugadores» elegís «Jugar solo».
+Todos ven a los demás jugadores y leen el chat, también sin cuenta (aparecen como «Visitante»); para escribir hace falta iniciar sesión (Google o email). Es opcional: en Opciones → «Otros jugadores» elegís «Jugar solo».
 
 - **Chat:** tecla `T` o el ícono de globo arriba del menú. `Enter` envía, `Esc` cancela. Mensajes de hasta 120 caracteres; se ven en el registro (abajo a la izquierda) y en un globo sobre quien habla.
 - **Salas:** hasta 12 jugadores por sala; si está llena, pasás a la siguiente. Los demás aparecen con su nombre, color de auto o aspecto, y como puntos verdes en el minimapa y el mapa.
-- **Cómo funciona:** Supabase Realtime con dos canales privados por sala (`vallecito:pos:N` para posiciones y presencia, `vallecito:chat:N` solo de lectura). Los mensajes entran por la función `send_chat`, que valida todo en el servidor: nombre tomado del perfil guardado, límite de 1 mensaje cada 0,7 s y 5 cada 10 s, y lista de silenciados.
+- **Cómo funciona:** Supabase Realtime con dos canales privados por sala (`vallecito:pos:N` para posiciones y presencia, `vallecito:chat:N` solo de lectura). Los invitados pueden leer y moverse pero no escribir. Los mensajes entran por la función `send_chat`, que valida todo en el servidor: nombre tomado del perfil guardado, límite de 1 mensaje cada 0,7 s y 5 cada 10 s, y lista de silenciados.
 - **Código:** `src/multiplayer/` (protocolo, red, jugadores remotos, orquestación) y `src/ui/Chat.ts`. La migración es `supabase/migrations/202610160003_multiplayer_chat.sql` (ya aplicada en el proyecto Vallecito); `npm run test:chat` la prueba sobre PostgreSQL embebido.
 - **Silenciar a alguien:** `insert into public.chat_bans(user_id, reason) values ('<uuid>', 'motivo');` (los mensajes quedan registrados en `public.chat_messages` con el `user_id`).
 - **Límites conocidos:** los otros autos no chocan con el tuyo (son «fantasmas»), y los nombres sobre la cabeza los manda cada cliente, mientras que los del chat son verificados por el servidor. El plan gratuito de Supabase Realtime tiene tope de mensajes por segundo: 12 jugadores moviéndose entran, pero con mucho público conviene subir de plan o bajar `ROOM_CAP`.
