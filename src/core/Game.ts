@@ -324,7 +324,8 @@ export class Game {
     overlays.openPause([
       { id: 'resume', label: 'Seguir paseando', primary: true },
       { id: 'album', label: `Postales · ${this.pois.discovered.size} de ${this.world.pois.length}`, icon: 'postal' },
-      { id: 'map', label: 'Mapa y viaje rápido', icon: 'mapa' },
+      { id: 'map', label: this.hitchhikers.active ? `Destino: ${this.hitchhikers.active.destination}` : 'Mapa y viaje rápido', icon: 'mapa' },
+      ...(this.hitchhikers.active ? [{ id: 'cancel-ride', label: 'Cancelar traslado del pasajero' }] : []),
       { id: 'photo', label: 'Foto del paseo · compartir', icon: 'modo-foto' },
       { id: 'profile', label: 'Mi nombre, aspecto y cuenta' },
       { id: 'vehicle', label: this.player.flying ? 'Volver al auto' : 'Volar en avioneta', icon: this.player.flying ? 'auto' : 'avioneta' },
@@ -334,7 +335,8 @@ export class Game {
       { id: 'home', label: 'Volver al inicio' },
     ], (id) => {
       if (id === 'resume') { overlays.closeAll(); return; }
-      if (id === 'map') { overlays.closeAll(); this.toggleMap(); return; }
+      if (id === 'map') { overlays.closeAll(); this.toggleMap(); const r = this.hitchhikers.active; if (r) this.hud.mapView.centerOn(r.destX, r.destN, 3); return; }
+      if (id === 'cancel-ride') { this.hitchhikers.cancel(); overlays.closeAll(); return; }
       if (id === 'album') this.openAlbum();
       else if (id === 'photo') {
         const target = this.player.position;
@@ -411,7 +413,7 @@ export class Game {
     if (!this.paused) {
       this.pois.update(dt, target.x, -target.z, driving || flying, flying ? target.y : undefined);
       const ride = this.hitchhikers.update(dt, target.x, -target.z, speed, driving);
-      this.ridePanel.classList.toggle('hidden', !ride);
+      this.ridePanel.classList.toggle('hidden', !ride || !!this.hitchhikers.active);
       if (ride) this.ridePanel.querySelector('p')!.textContent = ride;
       this.ridePanel.querySelector('.ride-pickup')!.classList.toggle('hidden', !!this.hitchhikers.active || !driving || Math.abs(speed) >= 1.5);
       this.ridePanel.querySelector('.ride-map')!.classList.toggle('hidden', !this.hitchhikers.active);
@@ -429,7 +431,7 @@ export class Game {
     if (flying) this.hud.setFlight(p.plane.altitude, p.plane.grounded);
     const cam = driving || flying ? null : p.car.position;
     this.miniZoom += ((flying ? 0.4 : driving ? THREE.MathUtils.lerp(1, 0.55, Math.min(1, Math.abs(speed) / 30)) : 1.6) - this.miniZoom) * Math.min(1, dt * 2);
-    this.hud.minimap.draw(target.x, -target.z, heading, cam ? cam.x : null, cam ? -cam.z : null, this.pois.discovered, this.miniZoom);
+    this.hud.minimap.draw(target.x, -target.z, heading, cam ? cam.x : null, cam ? -cam.z : null, this.pois.discovered, this.miniZoom, this.hitchhikers.active);
     const action = p.canExit() ? 'Bajarse del auto' : p.canEnter() ? 'Subir al auto' : null;
     if (this.input.touch) {
       this.input.touch.setAction(action ? (p.canExit() ? 'Bajar' : 'Subir') : null);

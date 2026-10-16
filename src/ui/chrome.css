@@ -225,3 +225,35 @@ body.touch .hud-bl { position: absolute; left: max(20px, var(--safe-l)); top: au
 .account-top > .auth-feedback:empty { display: none; }
 .account-top > .account-privacy { margin: 10px 0 0; color: var(--ink-muted); font-size: 12px; line-height: 1.4; }
 .account-privacy a { color: var(--pino); text-underline-offset: 3px; }
+
+/* One quiet notification replaces the location/currency while visible. */
+.hud.has-toast .hud-tl { visibility: hidden; }
+.hud .toasts { z-index: 5; left: max(24px, var(--safe-l)); top: calc(24px + var(--safe-t)); bottom: auto; transform: none; width: min(310px, calc(100vw - 220px)); align-items: stretch; }
+.hud .toast { width: 100%; padding: 11px 13px; border-radius: 11px; text-align: left; animation: toast-in .2s ease-out; transition: opacity .2s, transform .2s; background: rgba(22,34,32,.94); color: var(--crema); box-shadow: none; }
+.hud .toast .t1 { font: 600 14px/1.3 var(--f-sans); color: var(--crema); }
+.hud .toast .t2 { font: 400 12px/1.35 var(--f-sans); color: var(--on-dark-muted); }
+.hud .toast.postal { gap: 9px; border: 1px solid #f3e7c824; }
+.hud .toast.postal img { width: 42px; height: 42px; border: 0; transform: none; box-shadow: none; }
+.hud .toast.postal .eyebrow { font-size: 9px; color: var(--pasto); }
+@media (max-width: 760px) {
+  .hud .toasts { left: max(16px, var(--safe-l)); top: calc(18px + var(--safe-t)); bottom: auto; width: calc(100vw - 162px); }
+  .hud .toast { padding: 10px 11px; }
+  .hud .toast .t1 { font-size: 12px; }
+  .hud .toast .t2 { font-size: 11px; }
+}
+
+.profile-entry-copy { display: grid; text-align: left; gap: 4px; }
+.profile-entry-copy strong { font-weight: 500; }
+.profile-entry-detail { font-size: 11px; color: var(--on-dark-muted); }
+.profile-entry-arrow { margin-left: auto; }
+@media (max-width: 760px) {
+  .title-panel .profile-entry { width: 100%; margin: 0; min-height: 66px; padding: 12px 14px; gap: 12px; border: 1px solid #efb63880; border-radius: 12px; background: #f3e7c812; color: var(--crema); }
+  .title-panel .profile-entry:hover { background: #f3e7c81e; }
+  .title-panel .profile-entry > .ui-icon { width: 28px; height: 30px; color: var(--pasto); }
+  .profile-entry-copy strong { font-size: 19px; font-weight: 600; }
+  .profile-entry-detail { font-size: 11px; }
+  .profile-entry-arrow { color: var(--pasto); font-size: 25px; }
+  .title .vehicle-choice button { min-height: 40px; font-size: 14px; background: transparent; }
+  .title .vehicle-choice button img { width: 24px; height: 24px; }
+  .title .vehicle-choice button[aria-pressed="true"] { background: #f3e7c826; color: var(--crema); box-shadow: none; }
+}

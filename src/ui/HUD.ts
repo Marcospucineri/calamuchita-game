@@ -22,6 +22,7 @@ export class HUD {
   private speedUnit!: HTMLElement;
   private prompt!: HTMLElement;
   private toastBox!: HTMLElement;
+  private toastTimers: ReturnType<typeof setTimeout>[] = [];
   private postales!: HTMLElement;
   private help!: HTMLElement;
   private bigMap!: HTMLElement;
@@ -184,10 +185,8 @@ export class HUD {
     el.innerHTML = `<img alt="" src="${postcardImage(id, true)}"><div><div class="label eyebrow">Postal nueva</div><div class="t1"></div><div class="t2"></div></div>`;
     el.querySelector('.t1')!.textContent = name;
     el.querySelector('.t2')!.textContent = sub;
-    el.addEventListener('click', () => { el.remove(); this.onOpenPostal?.(id); });
-    this.toastBox.prepend(el);
-    setTimeout(() => el.classList.add('out'), 6500);
-    setTimeout(() => el.remove(), 7300);
+    el.addEventListener('click', () => { this.clearToast(); this.onOpenPostal?.(id); });
+    this.showToast(el, 5000);
   }
 
   toast(text: string, sub?: string, postal = false): void {
@@ -196,9 +195,27 @@ export class HUD {
     el.innerHTML = `<div class="t1"></div>${sub ? '<div class="t2"></div>' : ''}`;
     el.querySelector('.t1')!.textContent = text;
     if (sub) el.querySelector('.t2')!.textContent = sub;
-    this.toastBox.appendChild(el);
-    setTimeout(() => el.classList.add('out'), 4200);
-    setTimeout(() => el.remove(), 5000);
+    // Keep an actionable new postcard when its simultaneous reward arrives.
+    if (this.toastBox.querySelector('.postal') && /^\+\d+ Serranos$/.test(text)) {
+      this.toastBox.querySelector('.t2')!.textContent = `${text} · ${sub ?? ''}`;
+      return;
+    }
+    this.showToast(el, 3500);
+  }
+
+  private clearToast(): void {
+    this.toastTimers.forEach(clearTimeout);
+    this.toastTimers = [];
+    this.toastBox.replaceChildren();
+    this.root.classList.remove('has-toast');
+  }
+
+  private showToast(el: HTMLElement, duration: number): void {
+    this.clearToast();
+    this.toastBox.replaceChildren(el);
+    this.root.classList.add('has-toast');
+    this.toastTimers.push(setTimeout(() => el.classList.add('out'), duration));
+    this.toastTimers.push(setTimeout(() => this.clearToast(), duration + 250));
   }
 
   setPrompt(text: string | null): void {

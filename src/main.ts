@@ -51,7 +51,7 @@ title.innerHTML = `
     <div class="title-dock">
     <section class="title-panel" aria-label="Empezar">
       <div class="title-place">${lineIcon('pin')}<span class="label edition">Valle de Calamuchita · Córdoba</span></div>
-      <button class="profile-entry" type="button" disabled>${lineIcon('person')}<span>Tu personaje</span><span aria-hidden="true">›</span></button>
+      <button class="profile-entry" type="button" disabled>${lineIcon('person')}<span class="profile-entry-copy"><strong>Tu personaje</strong><span class="profile-entry-detail">Nombre, aspecto y cuenta</span></span><span class="profile-entry-arrow" aria-hidden="true">›</span></button>
       <div class="choose">
         <div class="seg vehicle-choice" role="group" aria-label="Elegí tu vehículo">
           <button data-vehicle="car" aria-pressed="true" disabled><img alt="" src="${icon('auto')}">Auto</button>
@@ -150,7 +150,7 @@ async function boot(): Promise<void> {
     if (!params.has('vehicle')) vehicle = save?.vehicle ?? vehicle;
     if (CAR_PAINTS.some((p) => p.id === save?.paint)) { paint = save!.paint as CarPaint; markPaint(); }
     const profileButton = title.querySelector<HTMLButtonElement>('.profile-entry')!;
-    const updateProfileButton = () => { profileButton.querySelector('span')!.textContent = save?.progress?.profile.name ?? 'Tu personaje'; };
+    const updateProfileButton = () => { profileButton.querySelector('.profile-entry-detail')!.textContent = save?.progress?.profile.name ? `${save.progress.profile.name} · Editar aspecto y cuenta` : 'Nombre, aspecto y cuenta'; };
     const editProfile = () => {
       const progress = save?.progress ?? newProgress();
       const balance = accounts.balance ?? postalRewards(world.pois, save?.discovered ?? []) + progress.trips.reduce((sum, t) => sum + tripReward(routes.find((r) => r.id === t.routeId)?.distance ?? 0), 0) + new Set(progress.photos ?? []).size * 10;

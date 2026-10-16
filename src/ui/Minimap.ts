@@ -3,6 +3,19 @@ import { getAirfield } from '../world/Airfield';
 
 const MPP = 6; // metros por píxel del mapa pre-renderizado
 
+/** Project a world destination into the rotating minimap, clamping it inside its rim. */
+export function destinationMarker(x: number, n: number, heading: number, destX: number, destN: number, zoom: number) {
+  const dx = (destX - x) / MPP * zoom;
+  const dy = (n - destN) / MPP * zoom;
+  const angle = heading - Math.PI / 2;
+  const sx = dx * Math.cos(angle) - dy * Math.sin(angle);
+  const sy = dx * Math.sin(angle) + dy * Math.cos(angle);
+  const distance = Math.hypot(dx, dy);
+  const limit = 71;
+  const scale = distance > 0 ? Math.min(1, limit / distance) : 1;
+  return { x: sx * scale, y: sy * scale, angle: Math.atan2(sy, sx) + Math.PI / 2, edge: distance > limit };
+}
+
 /** Mapa pintado a partir de los mismos datos del mundo (rutas, ríos, pueblos). */
 export class MapRenderer {
   readonly canvas: HTMLCanvasElement;
@@ -120,7 +133,7 @@ export class Minimap {
     this.g.scale(dpr, dpr);
   }
 
-  draw(x: number, n: number, heading: number, carX: number | null, carN: number | null, discovered: Set<string>, zoom: number): void {
+  draw(x: number, n: number, heading: number, carX: number | null, carN: number | null, discovered: Set<string>, zoom: number, destination: { destX: number; destN: number; destination: string } | null = null): void {
     const g = this.g, S = 190, R = S / 2;
     g.save();
     g.clearRect(0, 0, S, S);
@@ -146,6 +159,36 @@ export class Minimap {
       g.fillRect(cx - px - 4 / zoom, cy - py - 3 / zoom, 8 / zoom, 6 / zoom);
     }
     g.restore();
+    if (destination) {
+      const marker = destinationMarker(x, n, heading, destination.destX, destination.destN, zoom);
+      const { x: tx, y: ty, edge } = marker;
+      g.save();
+      g.translate(R, R);
+      // A bearing, not a road route: the arrow stays inside the map when far away.
+      g.strokeStyle = '#24452f99'; g.lineWidth = 2; g.setLineDash([3, 5]);
+      g.beginPath(); g.moveTo(0, 0); g.lineTo(tx, ty); g.stroke(); g.setLineDash([]);
+      g.translate(tx, ty);
+      g.fillStyle = '#efb638'; g.strokeStyle = '#24452f'; g.lineWidth = 2.5;
+      g.beginPath(); g.arc(0, 0, 12, 0, Math.PI * 2); g.fill(); g.stroke();
+      if (edge) {
+        g.rotate(marker.angle);
+        g.fillStyle = '#24452f';
+        g.beginPath(); g.moveTo(0, -8); g.lineTo(6, 5); g.lineTo(0, 2); g.lineTo(-6, 5); g.closePath(); g.fill();
+      } else {
+        g.strokeStyle = '#24452f'; g.lineWidth = 2;
+        g.beginPath(); g.moveTo(-3, 7); g.lineTo(-3, -7); g.lineTo(6, -7); g.lineTo(6, 0); g.lineTo(-3, 0); g.stroke();
+      }
+      g.restore();
+      const meters = Math.hypot(destination.destX - x, destination.destN - n);
+      const label = meters < 35 ? 'Frená para dejarle' : meters >= 1000 ? `${(meters / 1000).toFixed(1)} km` : `${Math.round(meters)} m`;
+      g.save();
+      g.font = '700 12px "Josefin Sans", sans-serif'; g.textAlign = 'center';
+      const width = g.measureText(label).width + 14;
+      g.fillStyle = '#162220'; g.fillRect(R - width / 2, S - 31, width, 19);
+      g.fillStyle = '#fbf5e6'; g.fillText(label, R, S - 17);
+      g.restore();
+      this.el.setAttribute('aria-label', `Destino: ${destination.destination}, ${label}. Flecha en dirección a la llegada.`);
+    } else this.el.setAttribute('aria-label', 'Minimapa del valle');
     // jugador (siempre hacia arriba)
     g.save();
     g.translate(R, R);

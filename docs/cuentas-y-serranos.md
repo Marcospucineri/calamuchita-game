@@ -40,7 +40,7 @@ El esquema está en `supabase/migrations/202610160001_progress.sql`. Ya se aplic
 
 Se configuró Site URL en `https://vallecito.ar` y las redirecciones exactas `https://vallecito.ar/`, `http://localhost:5173/` y `http://127.0.0.1:5173/`. Para usar otro puerto o dominio hay que agregarlo. La confirmación del email y la recuperación usan esos destinos. Para enviar correos al público falta configurar SMTP propio; el servicio de pruebas de Supabase tiene restricciones de destinatarios. Ver [SMTP de Supabase](https://supabase.com/docs/guides/auth/auth-smtp).
 
-Email/contraseña está habilitado. Google ya está configurado y habilitado en Supabase, con el cliente web «Vallecito web · Supabase» del proyecto Google Cloud `vallecito-511819`. Se comprobó el ingreso real y el guardado de progreso con Google. El secreto del cliente está guardado en Supabase y no se incorpora al juego. Google sigue en estado «Prueba», con la cuenta del propietario como usuario de prueba. Después de desplegar `public/privacidad.html`, queda publicar la aplicación OAuth desde Google Auth Platform → Público → Publicar app para abrir el ingreso al público. La página de privacidad configurada es `https://vallecito.ar/privacidad.html`.
+Email/contraseña está habilitado. Google ya está configurado y habilitado en Supabase, con el cliente web «Vallecito web · Supabase» del proyecto Google Cloud `vallecito-511819`. Se comprobó el ingreso real y el guardado de progreso con Google. El secreto del cliente está guardado en Supabase y no se incorpora al juego. Google quedó en estado «En producción» el 16/10/2026, después de desplegar `public/privacidad.html`, para permitir el ingreso de jugadores fuera de la lista de prueba. La página de privacidad configurada es `https://vallecito.ar/privacidad.html`.
 
 `node tools/build-hitchhikes.mjs` regenera las rutas y el catálogo inicial. Después de aplicar esta primera migración, los cambios de catálogo deben llevar una migración SQL nueva.
 
@@ -64,3 +64,14 @@ La música usa únicamente `Vallecito.mp3` y `Camino de Verano.mp3`, con volumen
 - `node tools/check-supabase.mjs`: prueba opcional contra el proyecto configurado. Requiere la clave secreta local. Crea una cuenta temporal confirmada, prueba login, guardado, lectura, recompensas y permisos, y elimina esa cuenta. No manda emails ni imprime credenciales.
 
 Se verificó la API real de Vallecito y la interfaz en el navegador. El ingreso con Google se probó de punta a punta. La confirmación y recuperación por email para el público siguen pendientes de SMTP propio.
+
+
+## Ajustes mobile · 16/10/2026
+
+El destino del pasajero aparece en el minimapa: flecha dorada en el borde si queda fuera del área visible, bandera al acercarse y distancia restante. Es una indicación de dirección directa, no navegación por calles. Se quitó el cartel permanente del traslado. El menú permite ver el destino en el mapa grande y cancelar el viaje.
+
+Los avisos comparten un único espacio arriba a la izquierda y sustituyen temporalmente ubicación y saldo. El aviso más reciente reemplaza al anterior sin cola; una recompensa simultánea por postal se incorpora a la tarjeta de esa postal, conservando el acceso al álbum. «Tu personaje» tiene más jerarquía que Auto/Avioneta en mobile.
+
+Railway tenía únicamente las variables de notas. Se agregaron `SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY` al servicio `calamuchita-game` y se reconstruyó el despliegue existente. No se cargó la clave secreta. Estas variables deben conservarse en los próximos builds. Se probó el ingreso con Google desde `https://vallecito.ar/`, el retorno al juego y el estado «Progreso guardado en tu cuenta», recuperando las postales y el saldo. Google Auth Platform quedó en producción para usuarios externos.
+
+`npm run test:mobile` comprueba dirección y límites del indicador del minimapa, reemplazo de avisos y cancelación de temporizadores anteriores.

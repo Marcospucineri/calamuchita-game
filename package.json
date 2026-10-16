@@ -17,7 +17,8 @@
     "test:progress": "node tools/test-progress.mjs && node tools/test-cloud.mjs && node tools/test-hitchhikes.mjs",
     "test:audio": "node tools/test-audio-focus.mjs",
     "test:vehicle": "node tools/test-vehicle-visibility.mjs",
-    "test:avatar": "node tools/test-avatar.mjs"
+    "test:avatar": "node tools/test-avatar.mjs",
+    "test:mobile": "node tools/test-mobile-hud.mjs"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.21.0",
