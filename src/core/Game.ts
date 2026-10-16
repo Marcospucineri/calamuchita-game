@@ -118,7 +118,9 @@ export class Game {
 
     // punto de partida: frente al portal de VGB (o la partida guardada)
     const st = world.meta.start;
-    const carX = save?.car.x ?? st.x, carN = save?.car.n ?? st.n, carH = save?.car.heading ?? st.heading;
+    // primera vez: unos 40 m antes del punto original, así la autoestopista del Portal se ve a lo lejos y no encima
+    const back = save ? 0 : 40;
+    const carX = save?.car.x ?? st.x - Math.cos(st.heading) * back, carN = save?.car.n ?? st.n - Math.sin(st.heading) * back, carH = save?.car.heading ?? st.heading;
     const car = new Vehicle(this.physics, world, scene, new THREE.Vector3(carX, world.heightAt(carX, carN) + 1, -carN), carH);
     const person = new Character(this.physics, scene);
     person.setAppearance(this.progress.profile.appearance);
