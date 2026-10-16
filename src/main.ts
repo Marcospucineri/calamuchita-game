@@ -9,6 +9,7 @@ import { SaveSystem } from './gameplay/SaveSystem';
 import { CAR_PAINTS, CarPaint } from './player/Vehicle';
 import { WorldData } from './world/WorldData';
 import { overlays } from './ui/Overlays';
+import { openRanking } from './ui/Ranking';
 import { accounts } from './services/Accounts';
 import { analytics } from './services/Analytics';
 import { newProgress, normalizeProfile, postalRewards, tripReward } from './gameplay/Progress';
@@ -77,6 +78,7 @@ title.innerHTML = `
         <button data-l="controls">${lineIcon('controls')}<span>Controles</span></button>
         <button data-l="credits">${lineIcon('star')}<span>Créditos</span></button>
       </nav>
+      <button class="title-ranking hidden" type="button">${lineIcon('star')}<span>Ranking · kilómetros de valle</span></button>
     </div>
   </div>`;
 document.body.appendChild(title);
@@ -145,6 +147,8 @@ async function boot(): Promise<void> {
       document.fonts?.load('700 32px "Josefin Sans"').catch(() => null),
       document.fonts?.load('400 32px "Berkshire Swash"').catch(() => null),
     ]);
+    title.querySelector('.title-ranking')!.classList.toggle('hidden', !accounts.user);
+    title.querySelector('.title-ranking')!.addEventListener('click', openRanking);
     worldReady = world;
     save = SaveSystem.load();
     if (!params.has('vehicle')) vehicle = save?.vehicle ?? vehicle;

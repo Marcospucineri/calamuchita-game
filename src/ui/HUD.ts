@@ -40,6 +40,7 @@ export class HUD {
   onMapButton: (() => void) | null = null;
   onAlbum: (() => void) | null = null;
   onMenu: (() => void) | null = null;
+  onCamera: (() => void) | null = null;
   /** Tocar el aviso de una postal nueva la abre en el álbum. */
   onOpenPostal: ((id: string) => void) | null = null;
   /** Lo define el juego: viajar a un punto (coordenadas del pipeline). */
@@ -69,6 +70,7 @@ export class HUD {
         <div class="hud-btns">
           <button class="hbtn glass" data-a="map" aria-label="Mapa (M)" title="Mapa (M)">${icon('map')}</button>
           <button class="hbtn glass postales" data-a="album" aria-label="Postales" title="Postales"><img alt="" src="${ico('postal')}"><span class="badge"><b>0</b>/<span>0</span></span></button>
+          <button class="hbtn glass" data-a="camera" aria-label="Cambiar cámara" title="Cambiar cámara (C)">${icon('camera')}</button>
           <button class="hbtn glass" data-a="menu" aria-label="Menú (Esc)" title="Menú (Esc)">${icon('menu')}</button>
         </div>
       </div>
@@ -126,6 +128,7 @@ export class HUD {
       b.addEventListener('click', () => {
         if (b.dataset.a === 'map') this.onMapButton?.();
         else if (b.dataset.a === 'album') this.onAlbum?.();
+        else if (b.dataset.a === 'camera') this.onCamera?.();
         else this.onMenu?.();
       });
     }

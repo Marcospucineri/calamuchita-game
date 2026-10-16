@@ -1,3 +1,4 @@
+import { openRanking } from './Ranking';
 import * as THREE from 'three';
 import { createAvatar } from '../player/Character';
 import { DEFAULT_PROFILE, HAIRSTYLES, HAIR_COLORS, SHIRTS, SKINS, normalizeProfile, type Profile } from '../gameplay/Progress';
@@ -81,8 +82,9 @@ export function openProfile(profile: Profile, balance: number, onSave: (p: Profi
   }
   const preserve = () => { draft.name = name.value || 'Visitante'; onSave(normalizeProfile(draft)); beforeAuth(); };
   if (accounts.user && !accounts.recovery) {
-    heroButtons.innerHTML = '<button class="account-signout" type="button">Cerrar sesión</button>';
-    heroButtons.querySelector('button')!.addEventListener('click', async (e) => {
+    heroButtons.innerHTML = '<button class="btn btn-light profile-ranking" type="button">Ranking del valle</button><button class="account-signout" type="button">Cerrar sesión</button>';
+    heroButtons.querySelector('.profile-ranking')!.addEventListener('click', openRanking);
+    heroButtons.querySelector('.account-signout')!.addEventListener('click', async (e) => {
       const button = e.currentTarget as HTMLButtonElement; button.disabled = true;
       try { preserve(); await accounts.signOut(); } catch { status.textContent = 'No se pudo cerrar sesión. Volvé a intentar.'; button.disabled = false; }
     });

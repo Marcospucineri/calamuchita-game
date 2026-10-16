@@ -33,6 +33,19 @@ try {
   save.progress.photos = [day, day];
   result = await client.rpc('sync_progress', { incoming: save }); assert.equal(result.data.balance, 60, 'Daily photo pays once');
   result = await client.rpc('sync_progress', { incoming: save }); assert.equal(result.data.balance, 60);
+  const sessionId = randomUUID();
+  const distanceArgs = { session_id: sessionId, active_seconds: 5, car_meters: 100, plane_meters: 20, foot_meters: 5 };
+  assert.equal((await client.rpc('record_distance', distanceArgs)).error, null);
+  assert.equal((await client.rpc('record_distance', distanceArgs)).error, null);
+  for (const [category, meters] of [['car',100],['plane',20],['foot',5]]) {
+    const ranking = await client.rpc('distance_ranking', { category });
+    assert.equal(ranking.error, null);
+    assert.equal(ranking.data.find((r) => r.is_me).meters, meters, 'Real distance retry does not duplicate');
+    assert.ok(ranking.data.every((r) => !('user_id' in r) && !('email' in r)), 'Only public ranking fields');
+  }
+  assert.ok((await anon.rpc('distance_ranking', { category: 'car' })).error, 'Anonymous ranking denied');
+  assert.ok((await client.from('player_distances').update({ car: 99999 }).eq('user_id',id)).error);
+  console.log('OK ranking real: tres categorías, reintentos sin duplicación y acceso privado.');
   console.log('OK Supabase real: login, guardado/lectura, postal única, foto diaria y permisos.');
 } finally {
   await client.auth.signOut();

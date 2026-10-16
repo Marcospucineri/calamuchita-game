@@ -75,3 +75,18 @@ Los avisos comparten un único espacio arriba a la izquierda y sustituyen tempor
 Railway tenía únicamente las variables de notas. Se agregaron `SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY` al servicio `calamuchita-game` y se reconstruyó el despliegue existente. No se cargó la clave secreta. Estas variables deben conservarse en los próximos builds. Se probó el ingreso con Google desde `https://vallecito.ar/`, el retorno al juego y el estado «Progreso guardado en tu cuenta», recuperando las postales y el saldo. Google Auth Platform quedó en producción para usuarios externos.
 
 `npm run test:mobile` comprueba dirección y límites del indicador del minimapa, reemplazo de avisos y cancelación de temporizadores anteriores.
+
+
+## Ranking de kilómetros · 16/10/2026
+
+Solo los jugadores con sesión iniciada pueden aparecer y consultar el ranking. Hay tres categorías independientes: Auto, Avioneta y A pie. Se muestran 50 jugadores por categoría y la posición propia aunque quede fuera de esos 50; los empates comparten puesto. Se accede desde el inicio, el perfil o el menú de pausa. El nombre visible es el nombre elegido del personaje; no se comparten email, ID de cuenta ni guardados.
+
+Se mide el movimiento real de cada paso de física. Auto y caminata usan distancia horizontal; la avioneta incluye ascensos y descensos. No suman los viajes rápidos, cambios de vehículo, saltos de posición, transiciones de subir/bajar, pausas, pestañas ocultas ni el modo dios. Los saltos verticales a pie no suman. Se empieza desde cero: los guardados anteriores no contienen un historial recuperable de kilómetros.
+
+Las distancias se sincronizan cada cinco segundos mediante contadores acumulados por sesión. Los reintentos no duplican metros; distintas sesiones o dispositivos suman. Los envíos pendientes se conservan en este navegador, separados por cuenta, y se reintentan al volver a iniciar sesión. Una sesión que empezó completamente sin conexión necesita establecer su reloj en el servidor y puede demorar en sincronizarse. El servidor valida valores y límites de velocidad/tiempo; esto no reemplaza una simulación autoritativa contra clientes modificados.
+
+La migración `supabase/migrations/202610160002_distance_ranking.sql` ya se aplicó a Vallecito en una transacción. Agrega `distance_sessions`, `player_distances` y las funciones `record_distance` y `distance_ranking`. Las tablas tienen RLS y no permiten lectura ni escritura directa desde el juego. Solo las funciones autenticadas acceden a ellas. Borrar una cuenta borra sus distancias.
+
+`npm run test:ranking` prueba las categorías, reintentos, varios dispositivos, top 50 más posición propia, empates implícitos por rank, límites, permisos y medición física. `node tools/check-supabase.mjs` también comprueba el ranking real con una cuenta temporal, eliminada al terminar.
+
+En mobile se agregó un botón de cámara arriba del menú hamburguesa. Usa el mismo ciclo de vistas que la tecla C y guarda la vista elegida, sin generar un aviso.

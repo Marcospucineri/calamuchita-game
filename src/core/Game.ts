@@ -6,6 +6,8 @@ import { Input, InputState } from '../engine/Input';
 import { Physics, RAPIER } from '../engine/Physics';
 import { Renderer } from '../engine/Renderer';
 import { POIs } from '../gameplay/POI';
+import { distances, type TravelCategory } from '../services/Distances';
+import { openRanking } from '../ui/Ranking';
 import { accounts } from '../services/Accounts';
 import { analytics } from '../services/Analytics';
 import { newProgress, normalizeProfile, postalRewards, type Progress } from '../gameplay/Progress';
@@ -219,6 +221,7 @@ export class Game {
     this.hud.onMapButton = () => { if (!overlays.isOpen) this.toggleMap(); };
     this.hud.onAlbum = () => this.openAlbum();
     this.hud.onMenu = () => this.openPause();
+    this.hud.onCamera = () => { if (!overlays.isOpen) this.cycleCamera(); };
     this.hud.onOpenPostal = (id) => this.openAlbum(id);
 
     bus.on('player:mode', (e) => {
@@ -328,6 +331,7 @@ export class Game {
       ...(this.hitchhikers.active ? [{ id: 'cancel-ride', label: 'Cancelar traslado del pasajero' }] : []),
       { id: 'photo', label: 'Foto del paseo · compartir', icon: 'modo-foto' },
       { id: 'profile', label: 'Mi nombre, aspecto y cuenta' },
+      ...(accounts.user ? [{ id: 'ranking', label: 'Ranking · kilómetros de valle' }] : []),
       { id: 'vehicle', label: this.player.flying ? 'Volver al auto' : 'Volar en avioneta', icon: this.player.flying ? 'auto' : 'avioneta' },
       { id: 'options', label: 'Opciones' },
       { id: 'controls', label: 'Controles' },
@@ -345,6 +349,7 @@ export class Game {
         void openPhoto(this.renderer.renderer.domElement, place, this.progress, () => { this.updateWallet(); this.save(); });
       }
       else if (id === 'profile') this.openProfile();
+      else if (id === 'ranking') { this.save(); openRanking(); }
       else if (id === 'vehicle') { overlays.closeAll(); this.selectVehicle(this.player.flying ? 'car' : 'plane'); }
       else if (id === 'options') this.openOptions();
       else if (id === 'controls') overlays.openControls(!!this.input.touch);
@@ -353,11 +358,23 @@ export class Game {
     });
   }
 
+  private cycleCamera(): void {
+    this.cameraRig.cycleView();
+    try { localStorage.setItem('calamuchita.camera', this.cameraRig.view); } catch { /* sin almacenamiento */ }
+  }
+
   private fixed(dt: number): void {
     if (this.paused || this.debug?.god) return;
+    const mode = this.player.mode;
+    const position = this.player.position;
+    const from = { x: position.x, y: position.y, z: position.z };
     this.player.fixedUpdate(dt, this.state, this.cameraRig.yaw);
     this.physics.step();
     this.player.postStep();
+    if (mode === this.player.mode && (mode === 'driving' || mode === 'flying' || mode === 'onfoot')) {
+      const category: TravelCategory = mode === 'driving' ? 'car' : mode === 'flying' ? 'plane' : 'foot';
+      distances.record(category, dt, from, this.player.position);
+    }
   }
 
   private frame(dt: number, alpha: number): void {
@@ -376,11 +393,7 @@ export class Game {
     const menu = overlays.isOpen;
     if (this.state.mapPressed && !menu) this.toggleMap();
     if (menu) { this.state.cameraPressed = this.state.musicPressed = this.state.interactPressed = this.state.resetPressed = false; }
-    if (this.state.cameraPressed) {
-      this.cameraRig.cycleView();
-      // sin cartel al cambiar de cámara
-      try { localStorage.setItem('calamuchita.camera', this.cameraRig.view); } catch { /* sin almacenamiento */ }
-    }
+    if (this.state.cameraPressed) this.cycleCamera();
     if (this.state.musicPressed) {
       const name = this.music.next();
       bus.emit('toast', { text: `♪ Música: ${name}`, sub: 'N para cambiar' });
@@ -487,6 +500,7 @@ export class Game {
     };
     SaveSystem.save(data);
     void accounts.sync(data);
+    void distances.flush();
   }
 
   /** Viaje rápido: aparece en la calle más cercana al punto elegido en el mapa, ya arriba del auto. */

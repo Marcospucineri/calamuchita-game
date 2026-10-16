@@ -18,7 +18,8 @@
     "test:audio": "node tools/test-audio-focus.mjs",
     "test:vehicle": "node tools/test-vehicle-visibility.mjs",
     "test:avatar": "node tools/test-avatar.mjs",
-    "test:mobile": "node tools/test-mobile-hud.mjs"
+    "test:mobile": "node tools/test-mobile-hud.mjs",
+    "test:ranking": "node tools/test-ranking.mjs"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.21.0",

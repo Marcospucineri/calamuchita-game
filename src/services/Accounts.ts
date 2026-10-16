@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
 import { SaveSystem, type SaveData } from '../gameplay/SaveSystem';
 import { newProgress } from '../gameplay/Progress';
+import { distances } from './Distances';
 import { analytics } from './Analytics';
 
 class Accounts {
@@ -21,7 +22,7 @@ class Accounts {
   async init(): Promise<void> {
     try { await this.bootstrap(); }
     catch { this.status = 'Sin conexión: tu progreso queda en este dispositivo'; }
-    finally { this.ready = true; }
+    finally { this.ready = true; distances.init(this.client, this.user); }
   }
   private async bootstrap(): Promise<void> {
     const url = import.meta.env.VITE_SUPABASE_URL;
@@ -100,6 +101,7 @@ class Accounts {
     } catch { return false; }
   }
   async signOut(): Promise<void> {
+    await distances.flush();
     await this.queue;
     const result = await this.client?.auth.signOut();
     if (result?.error) throw result.error;
