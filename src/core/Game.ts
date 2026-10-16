@@ -179,6 +179,7 @@ export class Game {
       scene, camera: this.renderer.camera, hud: this.hud, world, player: this.player,
       profile: () => this.progress.profile,
       openProfile: () => this.openProfile(),
+      chime: () => this.audio.chime(),
     });
     this.hud.mapView.overlay = (g, project, metersPerPx) => {
       for (const o of this.online.remotes.markers()) {

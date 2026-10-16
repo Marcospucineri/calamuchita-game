@@ -556,10 +556,10 @@ body.touch .vehicle-switch button { min-height: 40px; }
 .mp-tag.self .mp-name { display: none; }
 
 .chat { position: absolute; left: max(24px, var(--safe-l)); bottom: calc(172px + var(--safe-b)); width: min(420px, calc(100vw - 48px)); display: flex; flex-direction: column; gap: 8px; pointer-events: none; font: 600 15px/1.35 var(--f-sans); z-index: 3; }
-.chat-log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; max-height: 11em; overflow: hidden; }
-.chat.typing .chat-log { max-height: 17em; overflow-y: auto; pointer-events: auto; }
+.chat-log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; max-height: 11em; overflow: hidden; -webkit-mask-image: linear-gradient(to bottom, transparent, #000 1.6em); mask-image: linear-gradient(to bottom, transparent, #000 1.6em); }
+.chat.typing .chat-log { max-height: min(17em, 42vh); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.3) transparent; pointer-events: auto; }
 .chat-line {
-  align-self: flex-start; max-width: 100%; padding: 4px 10px 2px; border-radius: 10px; background: var(--hud); color: var(--on-dark);
+  flex: none; align-self: flex-start; max-width: 100%; padding: 4px 10px 2px; border-radius: 10px; background: var(--hud); color: var(--on-dark);
   overflow-wrap: anywhere; max-height: 6em; overflow: hidden; transition: opacity 0.6s, max-height 0.6s 0.3s, padding 0.6s 0.3s; animation: toast-in 0.25s;
 }
 .chat-line b { color: var(--pasto); font-weight: 700; }

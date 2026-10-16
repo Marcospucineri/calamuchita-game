@@ -14,7 +14,7 @@ export interface ChatHooks {
 export interface ChatEntry { name: string; text: string; mine: boolean }
 
 const VISIBLE_MS = 14000;
-const KEEP = 60;
+const KEEP = 40;
 
 /**
  * Chat de la sala: registro abajo a la izquierda (las últimas líneas se van apagando) y una

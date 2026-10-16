@@ -15,6 +15,34 @@ export class VehicleAudio {
   private master!: GainNode;
   muted = false;
 
+  /** Campanita de aviso (dos notas con decaimiento), respeta el silencio. */
+  chime(): void {
+    const ctx = this.ctx;
+    if (!ctx || this.muted || ctx.state !== 'running') return;
+    const t = ctx.currentTime;
+    [[880, 0], [1318.5, 0.14]].forEach(([f, d]) => {
+      const o = ctx.createOscillator();
+      const h = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = 'sine';
+      h.type = 'sine';
+      o.frequency.value = f;
+      h.frequency.value = f * 2.76;
+      const hg = ctx.createGain();
+      hg.gain.value = 0.18;
+      g.gain.setValueAtTime(0.0001, t + d);
+      g.gain.exponentialRampToValueAtTime(0.16, t + d + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + d + 1.1);
+      o.connect(g);
+      h.connect(hg).connect(g);
+      g.connect(ctx.destination);
+      o.start(t + d);
+      h.start(t + d);
+      o.stop(t + d + 1.2);
+      h.stop(t + d + 1.2);
+    });
+  }
+
   start(): void {
     if (this.ctx) return;
     const ctx = new AudioContext();

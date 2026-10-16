@@ -25,6 +25,7 @@ export interface OnlineDeps {
   player: PlayerController;
   profile(): Profile;
   openProfile(): void;
+  chime(): void;
 }
 
 /** Une la red, los jugadores remotos y el chat con el resto del juego. */
@@ -54,7 +55,10 @@ export class Online {
       peerJoin: (sid, look) => {
         this.remotes.add(sid, look);
         this.chat.setOthers(this.net.peers.size);
-        if (performance.now() - this.connectedAt > 2500) bus.emit('toast', { text: `${look.name} se sumó al valle`, sub: 'Apretá T para saludar' });
+        if (performance.now() - this.connectedAt > 2500) {
+          bus.emit('toast', { text: `${look.name} se sumó al valle`, sub: 'Apretá T para saludar' });
+          this.d.chime();
+        }
       },
       peerLook: (sid, look) => this.remotes.setLook(sid, look),
       peerLeave: (sid) => { this.remotes.remove(sid); this.chat.setOthers(this.net.status === 'online' ? this.net.peers.size : null); },
