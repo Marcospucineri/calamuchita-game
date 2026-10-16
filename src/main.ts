@@ -24,7 +24,7 @@ try {
   const q = localStorage.getItem(QKEY) as QualityLevel | null;
   if (q === 'baja' || q === 'media' || q === 'alta') quality = q;
 } catch { /* sin almacenamiento */ }
-let paint: CarPaint = 'gris';
+let paint: CarPaint = 'arena';
 try {
   const v = localStorage.getItem(PKEY);
   if (CAR_PAINTS.some((p) => p.id === v)) paint = v as CarPaint;
@@ -47,8 +47,8 @@ title.innerHTML = `
           <button data-vehicle="car" aria-pressed="true" disabled><img alt="" src="${icon('auto')}">Auto</button>
           <button data-vehicle="plane" aria-pressed="false" disabled><img alt="" src="${icon('avioneta')}">Avioneta</button>
         </div>
-        <div class="paint" role="radiogroup" aria-label="Color del Fiat">
-          <span>Color del Fiat</span>
+        <div class="paint" role="radiogroup" aria-label="Color del auto">
+          <span>Color del auto</span>
           ${CAR_PAINTS.map((p) => `<button role="radio" data-paint="${p.id}" aria-checked="false" aria-label="${p.label}" title="${p.label}" style="--sw:${p.swatch}"></button>`).join('')}
         </div>
         <div class="departure-note hidden">La avioneta sale siempre del Aeroclub de Villa General Belgrano.</div>

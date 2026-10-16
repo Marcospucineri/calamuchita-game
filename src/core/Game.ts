@@ -167,7 +167,6 @@ export class Game {
     const r = this.renderer;
     const p = this.player;
     await Promise.all([
-      p.car.loadModel(`${import.meta.env.BASE_URL}models/fiat-uno-5-door.glb`),
       this.shops.load(import.meta.env.BASE_URL),
     ]);
     p.car.render(1);

@@ -100,7 +100,7 @@ export class Overlays {
       <dl class="credit-list">
         <dt>Creación</dt><dd><a href="${VALLE_VISUAL_URL}" target="_blank" rel="noopener">Marcos Pucineri · Valle Visual</a></dd>
         <dt>Ilustraciones</dt><dd>Postales, arte de tapa, logo e íconos: Valle Visual, generados con Magnific.</dd>
-        <dt>Modelos 3D</dt><dd>Deck y locales de Las Magnolias: <a href="https://www.instagram.com/antooaleman/" target="_blank" rel="noopener">@antooaleman</a><br>PSX Fiat Uno 5-door: <a href="https://sketchfab.com/3d-models/psx-fiat-uno-5-door-7340fb8b784b4e799f40b2bd62b9afa1" target="_blank" rel="noopener">Elite engineer</a>, licencia <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a></dd>
+        <dt>Modelos 3D</dt><dd>Deck y locales de Las Magnolias: <a href="https://www.instagram.com/antooaleman/" target="_blank" rel="noopener">@antooaleman</a></dd>
         <dt>Mapa del valle</dt><dd>Calles, ríos, edificios y lugares: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">colaboradores de OpenStreetMap</a> (ODbL).<br>Relieve: Terrain Tiles de Mapzen en AWS Open Data (SRTM, GMTED y otros).</dd>
         <dt>Tipografías</dt><dd>Berkshire Swash, Josefin Sans y Overpass Mono (SIL Open Font License).</dd>
         <dt>Tecnología</dt><dd>three.js, Rapier y Vite.</dd>

@@ -1,70 +1,19 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Physics, RAPIER } from '../engine/Physics';
 import { InputState } from '../engine/Input';
 import { paintedMaterial } from '../render/PaintedMaterial';
 import { WorldData } from '../world/WorldData';
 
-/** Colores del Fiat que se eligen en la pantalla de inicio. `paint` es el color final de la chapa. */
+/** Colores del auto que se eligen en la pantalla de inicio. `paint` es el color de la chapa. */
 export const CAR_PAINTS = [
-  { id: 'gris', label: 'Gris claro', paint: null, swatch: '#b9bab6' },
+  { id: 'arena', label: 'Arena', paint: '#bca36b', swatch: '#bca36b' },
+  { id: 'gris', label: 'Gris claro', paint: '#a9aaa6', swatch: '#b9bab6' },
   { id: 'negro', label: 'Negro', paint: '#2c2e33', swatch: '#24252a' },
-  { id: 'rojo', label: 'Rojo', paint: '#c9301f', swatch: '#b3231b' },
-  { id: 'azul', label: 'Azul', paint: '#2a62bf', swatch: '#1f4f9e' },
-  { id: 'blanco', label: 'Blanco', paint: '#efede6', swatch: '#f4f2ec' },
+  { id: 'rojo', label: 'Rojo', paint: '#b8321f', swatch: '#b3231b' },
+  { id: 'azul', label: 'Azul', paint: '#2a5fb0', swatch: '#1f4f9e' },
+  { id: 'blanco', label: 'Blanco', paint: '#e8e4d8', swatch: '#f4f2ec' },
 ] as const;
 export type CarPaint = (typeof CAR_PAINTS)[number]['id'];
-
-const toLin = (c: number) => { c /= 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
-const toSrgb = (l: number) => 255 * (l <= 0.0031308 ? l * 12.92 : 1.055 * l ** (1 / 2.4) - 0.055);
-/** Gris de la chapa en la textura original y aclarado que le aplica el material. */
-const BODY_GRAY = 92, BODY_GAIN = 1.85;
-
-/**
- * Repinta la chapa en la textura del Fiat: la pintura es un gris medio, igual que el degradé de
- * los vidrios, así que se toma por regiones conectadas (sin cruzar los bordes de ventanas y burletes)
- * y se conserva el sombreado de cada píxel.
- */
-function repaint(src: THREE.Texture, hex: string): THREE.Texture {
-  const img = src.image as CanvasImageSource & { width: number; height: number };
-  const W = img.width, H = img.height;
-  const c = document.createElement('canvas');
-  c.width = W; c.height = H;
-  const g = c.getContext('2d', { willReadFrequently: true })!;
-  g.drawImage(img, 0, 0);
-  const data = g.getImageData(0, 0, W, H);
-  const px = data.data;
-  const gray = (i: number) => px[i * 4];
-  const mask = new Uint8Array(W * H);
-  const okv = (i: number) => { const v = gray(i); return v >= 58 && v <= 120; };
-  // semillas (x, y en una textura de 256): lateral, capot, techo/portón y zona media
-  for (const [sx, sy] of [[50, 160], [50, 210], [225, 60], [120, 170]]) {
-    const x0 = Math.floor((sx / 256) * W), y0 = Math.floor((sy / 256) * H), i0 = y0 * W + x0;
-    if (!okv(i0) || mask[i0]) continue;
-    const stack = [i0];
-    mask[i0] = 1;
-    while (stack.length) {
-      const i = stack.pop()!, x = i % W, y = (i - x) / W;
-      for (const j of [x > 0 ? i - 1 : -1, x < W - 1 ? i + 1 : -1, y > 0 ? i - W : -1, y < H - 1 ? i + W : -1]) {
-        if (j >= 0 && !mask[j] && okv(j)) { mask[j] = 1; stack.push(j); }
-      }
-    }
-  }
-  const col = new THREE.Color(hex);
-  const target = [col.r, col.g, col.b].map((v) => toLin(v * 255) / BODY_GAIN);
-  const base = toLin(BODY_GRAY);
-  for (let i = 0; i < W * H; i++) {
-    if (!mask[i]) continue;
-    const shade = toLin(gray(i)) / base;
-    for (let k = 0; k < 3; k++) px[i * 4 + k] = Math.max(0, Math.min(255, Math.round(toSrgb(Math.min(1, target[k] * shade)))));
-  }
-  g.putImageData(data, 0, 0);
-  // clone() comparte la imagen (Source) con el original: hay que darle una propia
-  const t = src.clone();
-  t.source = new THREE.Source(c);
-  t.needsUpdate = true;
-  return t;
-}
 
 /** Parámetros del auto (sedán clásico argentino genérico). */
 export const SEDAN = {
@@ -99,17 +48,11 @@ export class Vehicle {
   readonly body: RAPIER.RigidBody;
   readonly controller: RAPIER.DynamicRayCastVehicleController;
   readonly mesh: THREE.Group;
-  private readonly fallbackModel: THREE.Group;
+  private readonly model: THREE.Group;
   private readonly contactShadow: THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial>;
   private wheels: THREE.Object3D[] = [];
-  private importedWheels: { pivot: THREE.Group; index: number; original: THREE.Quaternion }[] = [];
-  private importedWheelAxis = new THREE.Vector3(0, 0, 1);
-  private importedUpAxis = new THREE.Vector3(0, 1, 0);
-  private importedModel: THREE.Group | null = null;
-  private bodyMaterial: THREE.MeshLambertMaterial | null = null;
-  private bodyTexture: THREE.Texture | null = null;
-  private paint: CarPaint = 'gris';
-  private paintCache = new Map<CarPaint, THREE.Texture>();
+  /** Materiales de la chapa: base, tapas más claras y nervios más oscuros. */
+  private bodyMats: { paint: THREE.MeshToonMaterial; light: THREE.MeshToonMaterial; shade: THREE.MeshToonMaterial } | null = null;
   private interior: THREE.Group | null = null;
   /** Ojos del conductor en coordenadas del auto (X adelante, Z a la derecha; volante a la izquierda). */
   readonly driverEye = new THREE.Vector3(-0.3, 1.1, -0.36);
@@ -161,9 +104,9 @@ export class Vehicle {
     }
 
     this.mesh = new THREE.Group();
-    this.fallbackModel = this.buildModel();
-    this.mesh.add(this.fallbackModel);
-    this.fitCabin(new THREE.Box3().setFromObject(this.fallbackModel));
+    this.model = this.buildModel();
+    this.mesh.add(this.model);
+    this.fitCabin(new THREE.Box3().setFromObject(this.model));
     const shadowGeometry = new THREE.PlaneGeometry(5.25, 2.55);
     shadowGeometry.rotateX(-Math.PI / 2);
     this.contactShadow = new THREE.Mesh(shadowGeometry, new THREE.ShaderMaterial({
@@ -180,105 +123,15 @@ export class Vehicle {
     this.snapshot();
   }
 
-  /** Instala el Fiat Uno descargado, conservando el auto procedural si falla la carga. */
-  async loadModel(url: string): Promise<void> {
-    try {
-      const gltf = await new GLTFLoader().loadAsync(url);
-      const model = gltf.scene;
-      model.updateMatrixWorld(true);
-      const wheelMeshes = new Map<string, THREE.Mesh>();
-      model.traverse((object) => {
-        if (!(object instanceof THREE.Mesh)) return;
-        object.castShadow = true;
-        object.receiveShadow = true;
-        if (object.material instanceof THREE.MeshStandardMaterial && object.material.name === 'Body') {
-          // La textura contiene los detalles de la carrocería y los vidrios.
-          // Lambert conserva ese dibujo sin reflejos especulares en la pintura.
-          object.material = new THREE.MeshLambertMaterial({
-            name: 'Body mate',
-            map: object.material.map,
-            color: new THREE.Color().setRGB(BODY_GAIN, BODY_GAIN, BODY_GAIN),
-          });
-          this.bodyMaterial = object.material;
-          this.bodyTexture = object.material.map;
-        }
-        let parent: THREE.Object3D | null = object.parent;
-        while (parent) {
-          const key = /Wheel_(FL|FR|RL|RR)/.exec(parent.name)?.[1];
-          if (key) { wheelMeshes.set(key, object); break; }
-          parent = parent.parent;
-        }
-      });
-
-      // El archivo de Sketchfab llega inclinado respecto de los ejes del juego.
-      // Los centros de las ruedas definen el frente de forma estable.
-      const center = (name: string) => new THREE.Box3().setFromObject(wheelMeshes.get(name)!).getCenter(new THREE.Vector3());
-      const fl = center('FL'), fr = center('FR'), rl = center('RL'), rr = center('RR');
-      const front = fl.clone().add(fr).multiplyScalar(0.5);
-      const rear = rl.clone().add(rr).multiplyScalar(0.5);
-      const forward = front.sub(rear).normalize();
-      const right = fr.clone().add(rr).sub(fl).sub(rl).normalize();
-      const up = new THREE.Vector3().crossVectors(right, forward).normalize();
-      const axle = new THREE.Vector3().crossVectors(forward, up).normalize();
-      if (!Number.isFinite(forward.x) || forward.lengthSq() < 0.9 || up.lengthSq() < 0.9) throw new Error('Ejes del modelo inválidos');
-      this.importedWheelAxis.copy(axle);
-      this.importedUpAxis.copy(up);
-      const orientation = new THREE.Quaternion()
-        .setFromRotationMatrix(new THREE.Matrix4().makeBasis(forward, up, axle)).invert();
-      const wheelIndex: Record<string, number> = { FL: 1, FR: 0, RL: 3, RR: 2 };
-      this.importedWheels = [];
-      for (const [name, wheel] of wheelMeshes) {
-        const pivot = new THREE.Group();
-        pivot.position.copy(center(name));
-        model.add(pivot);
-        model.updateMatrixWorld(true);
-        pivot.attach(wheel);
-        this.importedWheels.push({ pivot, index: wheelIndex[name], original: pivot.quaternion.clone() });
-      }
-
-      const bounds = new THREE.Box3().setFromObject(model);
-      model.position.sub(bounds.getCenter(new THREE.Vector3()));
-      const fitted = new THREE.Group();
-      fitted.add(model);
-      fitted.quaternion.copy(orientation);
-      fitted.updateMatrixWorld(true);
-      const size = new THREE.Box3().setFromObject(fitted).getSize(new THREE.Vector3());
-      const scale = 1.12 * Math.min(4.48 / size.x, 1.82 / size.z, 1.85 / size.y);
-      if (!Number.isFinite(scale) || scale <= 0) throw new Error('Dimensiones del modelo inválidas');
-      fitted.scale.setScalar(scale);
-      fitted.updateMatrixWorld(true);
-      const finalBounds = new THREE.Box3().setFromObject(fitted);
-      const finalCenter = finalBounds.getCenter(new THREE.Vector3());
-      fitted.position.set(-finalCenter.x, -0.65 - finalBounds.min.y, -finalCenter.z);
-      this.mesh.add(fitted);
-      this.fitCabin(finalBounds.clone().translate(fitted.position));
-      this.fallbackModel.visible = false;
-      this.importedModel = fitted;
-      this.setPaint(this.paint);
-    } catch (error) {
-      console.warn('No se pudo cargar el modelo 3D del auto; se usa el anterior.', error);
-      this.importedWheels = [];
-      this.importedModel?.removeFromParent();
-      this.importedModel = null;
-      this.fallbackModel.visible = true;
-    }
-  }
-
-  /** Cambia el color de la chapa (si el modelo todavía no cargó, se aplica al cargar). */
+  /** Cambia el color de la chapa. */
   setPaint(id: CarPaint): void {
-    this.paint = id;
-    const mat = this.bodyMaterial, src = this.bodyTexture;
-    if (!mat || !src) return;
-    const def = CAR_PAINTS.find((p) => p.id === id);
-    let map: THREE.Texture = src;
-    if (def?.paint) {
-      let t = this.paintCache.get(id);
-      if (!t) {
-        try { t = repaint(src, def.paint); this.paintCache.set(id, t); } catch (e) { console.warn('No se pudo repintar el auto', e); }
-      }
-      if (t) map = t;
-    }
-    if (mat.map !== map) { mat.map = map; mat.needsUpdate = true; }
+    const def = CAR_PAINTS.find((p) => p.id === id) ?? CAR_PAINTS[0];
+    const m = this.bodyMats;
+    if (!m) return;
+    const base = new THREE.Color(def.paint);
+    m.paint.color.copy(base);
+    m.light.color.copy(base).offsetHSL(0, -0.02, 0.05);
+    m.shade.color.copy(base).multiplyScalar(0.78);
   }
 
   private buildModel(): THREE.Group {
@@ -286,6 +139,7 @@ export class Vehicle {
     const paint = paintedMaterial({ color: 0xbca36b, brushScale: 1.4, brushAmount: 0.16, rim: 0.25 });
     const lightPaint = paintedMaterial({ color: 0xc9b27a, brushScale: 1.4, brushAmount: 0.12, rim: 0.3 });
     const shade = paintedMaterial({ color: 0x937b4d, brushScale: 1.5, brushAmount: 0.13 });
+    this.bodyMats = { paint, light: lightPaint, shade };
     const chrome = paintedMaterial({ color: 0xc2c1b4, brushScale: 2, brushAmount: 0.06, rim: 0.42 });
     const trim = paintedMaterial({ color: 0x3a3831, brushScale: 2, brushAmount: 0.05 });
     const glass = paintedMaterial({ color: 0x415865, brushScale: 2.2, brushAmount: 0.07, rim: 0.65, side: THREE.DoubleSide });
@@ -580,16 +434,6 @@ export class Vehicle {
       const st = this.controller.wheelSteering(i) ?? 0;
       wg.rotation.set(0, st, 0);
       wg.children.forEach((ch) => (ch.rotation.z = -rotA));
-    }
-    if (this.importedWheels.length) {
-      // El eje de giro del archivo queda alineado con Z tras ajustar el modelo.
-      for (const { pivot, index, original } of this.importedWheels) {
-        const roll = this.controller.wheelRotation(index) ?? 0;
-        const steer = index < 2 ? this.controller.wheelSteering(index) ?? 0 : 0;
-        pivot.quaternion.copy(original)
-          .multiply(new THREE.Quaternion().setFromAxisAngle(this.importedUpAxis, steer))
-          .multiply(new THREE.Quaternion().setFromAxisAngle(this.importedWheelAxis, -roll));
-      }
     }
   }
 
