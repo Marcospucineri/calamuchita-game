@@ -28,6 +28,14 @@ export const DEFAULT_PROFILE: Profile = {
   name: 'Visitante',
   appearance: { skin: '#c79061', shirt: '#191e1c', hair: 'rapado', hairColor: '#392a1f', beard: false },
 };
+const NAME_KEY = 'calamuchita.name';
+/** Nombre escrito en la pantalla de inicio (vale aunque todavía no haya partida guardada). */
+export function storedName(): string {
+  try { return (localStorage.getItem(NAME_KEY) ?? '').trim().slice(0, 24); } catch { return ''; }
+}
+export function storeName(name: string): void {
+  try { localStorage.setItem(NAME_KEY, name.trim().slice(0, 24)); } catch { /* sin almacenamiento */ }
+}
 export const SKINS = ['#f2c7a5', '#c79061', '#754a35'];
 export const SHIRTS = ['#191e1c', '#a63f26', '#2f5c40'];
 export const HAIR_COLORS = ['#392a1f', '#ba7941', '#c7bba5'];

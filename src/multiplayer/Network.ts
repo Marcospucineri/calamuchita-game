@@ -168,7 +168,7 @@ export class Network {
     if (!clean) return null;
     if (!this.client || this.status !== 'online' || !this.room) return 'Todavía no estás conectado a una sala.';
     try {
-      const { error } = await this.client.rpc('send_chat', { room: this.room, message: clean, sid: this.sid });
+      const { error } = await this.client.rpc('send_chat', { room: this.room, message: clean, sid: this.sid, nick: this.look.name });
       if (!error) return null;
       if (/rate limit/i.test(error.message)) return 'Vas muy rápido: esperá un segundo.';
       if (/unavailable/i.test(error.message)) return 'El chat no está disponible para tu cuenta.';

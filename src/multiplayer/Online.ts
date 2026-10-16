@@ -3,7 +3,7 @@ import { bus } from '../core/EventBus';
 import { accounts } from '../services/Accounts';
 import { CAR_PAINTS } from '../player/Vehicle';
 import type { PlayerController } from '../player/PlayerController';
-import type { Profile } from '../gameplay/Progress';
+import { DEFAULT_PROFILE, type Profile } from '../gameplay/Progress';
 import type { WorldData } from '../world/WorldData';
 import type { HUD } from '../ui/HUD';
 import { overlays } from '../ui/Overlays';
@@ -26,6 +26,7 @@ export interface OnlineDeps {
   profile(): Profile;
   openProfile(): void;
   chime(): void;
+  setName(name: string): void;
 }
 
 /** Une la red, los jugadores remotos y el chat con el resto del juego. */
@@ -45,6 +46,8 @@ export class Online {
       blocked: () => overlays.isOpen || d.hud.isMapOpen,
       send: (text) => this.sendChat(text),
       info: () => this.info(),
+      needName: () => !this.d.profile().name || this.d.profile().name === DEFAULT_PROFILE.name,
+      setName: (name) => this.d.setName(name),
     });
     d.hud.onChat = () => this.chat.toggle();
     this.net.on = {
@@ -109,11 +112,7 @@ export class Online {
     if (this.simulated) return true;
     let why: string | null = null;
     if (!accounts.client) why = 'Sin conexión: el chat no está disponible.';
-    else if (!accounts.user) {
-      bus.emit('toast', { text: 'Iniciá sesión para escribir', sub: 'Podés ver a los demás y leer el chat sin cuenta; para escribir necesitás ingresar.' });
-      this.d.openProfile();
-      return false;
-    } else if (!this.enabled) why = 'El modo online está apagado. Podés activarlo en Opciones.';
+    else if (!this.enabled) why = 'El modo online está apagado. Podés activarlo en Opciones.';
     else if (this.net.status === 'connecting') why = 'Conectando con el valle…';
     else if (this.net.status !== 'online') why = 'No pudimos conectar con el valle. Reintentamos en unos segundos.';
     else if (!this.net.chatReady) why = 'El chat no está disponible en esta sala.';

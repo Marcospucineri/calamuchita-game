@@ -12,7 +12,8 @@ import { overlays } from './ui/Overlays';
 import { openRanking } from './ui/Ranking';
 import { accounts } from './services/Accounts';
 import { analytics } from './services/Analytics';
-import { newProgress, normalizeProfile, postalRewards, tripReward } from './gameplay/Progress';
+import { DEFAULT_PROFILE, newProgress, normalizeProfile, postalRewards, storeName, storedName, tripReward } from './gameplay/Progress';
+import { firstSpawn } from './world/Spawn';
 import { icon as lineIcon } from './ui/Icons';
 import { openProfile } from './ui/Profile';
 import routes from './gameplay/routes.json';
@@ -52,7 +53,10 @@ title.innerHTML = `
     <div class="title-dock">
     <section class="title-panel" aria-label="Empezar">
       <div class="title-place">${lineIcon('pin')}<span class="label edition">Valle de Calamuchita · Córdoba</span></div>
-      <button class="profile-entry" type="button" disabled>${lineIcon('person')}<span class="profile-entry-copy"><strong>Tu personaje</strong><span class="profile-entry-detail">Nombre, aspecto y cuenta</span></span><span class="profile-entry-arrow" aria-hidden="true">›</span></button>
+      <div class="name-row">
+        <label class="name-field">${lineIcon('person')}<span class="sr-only">Tu nombre</span><input class="name-input" type="text" maxlength="24" placeholder="¿Cómo te llamás?" autocomplete="nickname" spellcheck="false" enterkeyhint="done"></label>
+        <button class="profile-entry" type="button" disabled>Aspecto y cuenta<span class="profile-entry-arrow" aria-hidden="true">›</span></button>
+      </div>
       <div class="choose">
         <div class="seg vehicle-choice" role="group" aria-label="Elegí tu vehículo">
           <button data-vehicle="car" aria-pressed="true" disabled><img alt="" src="${icon('auto')}">Auto</button>
@@ -154,14 +158,32 @@ async function boot(): Promise<void> {
     if (!params.has('vehicle')) vehicle = save?.vehicle ?? vehicle;
     if (CAR_PAINTS.some((p) => p.id === save?.paint)) { paint = save!.paint as CarPaint; markPaint(); }
     const profileButton = title.querySelector<HTMLButtonElement>('.profile-entry')!;
-    const updateProfileButton = () => { profileButton.querySelector('.profile-entry-detail')!.textContent = save?.progress?.profile.name ? `${save.progress.profile.name} · Editar aspecto y cuenta` : 'Nombre, aspecto y cuenta'; };
+    const nameInput = title.querySelector<HTMLInputElement>('.name-input')!;
+    const savedName = () => { const n = save?.progress?.profile.name; return n && n !== DEFAULT_PROFILE.name ? n : storedName(); };
+    const updateProfileButton = () => { nameInput.value = savedName(); };
+    // el nombre alcanza para chatear: se guarda ni bien se escribe, con o sin partida
+    const commitName = () => {
+      const name = nameInput.value.trim().slice(0, 24);
+      if (name === savedName()) return;
+      storeName(name);
+      if (save?.progress) {
+        save.progress.profile = normalizeProfile({ ...save.progress.profile, name });
+        SaveSystem.save(save);
+        void accounts.sync(save);
+      }
+    };
+    nameInput.addEventListener('change', commitName);
+    nameInput.addEventListener('blur', commitName);
+    nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); commitName(); nameInput.blur(); } });
     const editProfile = () => {
       const progress = save?.progress ?? newProgress();
       const balance = accounts.balance ?? postalRewards(world.pois, save?.discovered ?? []) + progress.trips.reduce((sum, t) => sum + tripReward(routes.find((r) => r.id === t.routeId)?.distance ?? 0), 0) + new Set(progress.photos ?? []).size * 10;
       openProfile(normalizeProfile(progress.profile), balance, (profile) => {
         progress.profile = profile;
+        storeName(profile.name === DEFAULT_PROFILE.name ? '' : profile.name);
         const st = world.meta.start;
-        save = { version: 1, mode: 'driving', car: { ...st }, player: { x: st.x, n: st.n }, discovered: [], ...save, savedAt: Date.now(), vehicle, paint, progress };
+        const sp = firstSpawn(st);
+        save = { version: 1, mode: 'driving', car: { ...sp }, player: { x: sp.x, n: sp.n }, discovered: [], ...save, savedAt: Date.now(), vehicle, paint, progress };
         SaveSystem.save(save); void accounts.sync(save); updateProfileButton();
       });
     };
@@ -191,6 +213,7 @@ async function boot(): Promise<void> {
     startGame = (fresh: boolean) => {
       if (starting) return;
       starting = true;
+      commitName();
       overlays.closeAll();
       [...vButtons, play, albumLink].forEach((b) => { b.disabled = true; });
       play.textContent = 'Cargando…';

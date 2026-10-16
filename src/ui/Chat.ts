@@ -9,6 +9,9 @@ export interface ChatHooks {
   send(text: string): Promise<string | null>;
   /** "Sala 2 · 5 jugadores" */
   info(): string;
+  /** Todavía no puso nombre: la primera línea que escriba es su nombre. */
+  needName(): boolean;
+  setName(name: string): void;
 }
 
 export interface ChatEntry { name: string; text: string; mine: boolean }
@@ -28,6 +31,7 @@ export class ChatUI {
   private room = document.createElement('span');
   private button: HTMLButtonElement | null;
   private unread = 0;
+  private naming = false;
 
   constructor(parent: HTMLElement, private hooks: ChatHooks) {
     this.root.className = 'chat';
@@ -84,6 +88,9 @@ export class ChatUI {
     this.form.hidden = false;
     this.room.textContent = this.hooks.info();
     this.input.value = '';
+    this.naming = this.hooks.needName();
+    this.input.placeholder = this.naming ? 'Poné tu nombre y apretá Enter' : 'Escribí y apretá Enter';
+    this.input.maxLength = this.naming ? 24 : 120;
     this.unread = 0;
     this.button?.classList.remove('unread');
     this.button?.setAttribute('aria-pressed', 'true');
@@ -101,8 +108,15 @@ export class ChatUI {
 
   private submit(): void {
     const text = this.input.value.trim();
+    const naming = this.naming;
     this.close();
     if (!text) return;
+    if (naming) {
+      this.hooks.setName(text);
+      this.system(`Listo, ${text.slice(0, 24)}. Ya podés chatear.`);
+      this.open();
+      return;
+    }
     void this.hooks.send(text).then((error) => { if (error) this.system(error); });
   }
 

@@ -10,8 +10,9 @@ import { distances, type TravelCategory } from '../services/Distances';
 import { openRanking } from '../ui/Ranking';
 import { accounts } from '../services/Accounts';
 import { analytics } from '../services/Analytics';
-import { newProgress, normalizeProfile, postalRewards, type Progress } from '../gameplay/Progress';
+import { DEFAULT_PROFILE, newProgress, normalizeProfile, postalRewards, storeName, storedName, type Progress } from '../gameplay/Progress';
 import { Hitchhikers } from '../gameplay/Hitchhikers';
+import { firstSpawn } from '../world/Spawn';
 import { openPhoto } from '../ui/Photo';
 import { openProfile, serranoIcon } from '../ui/Profile';
 import { SaveData, SaveSystem } from '../gameplay/SaveSystem';
@@ -77,6 +78,7 @@ export class Game {
   constructor(readonly world: WorldData, canvas: HTMLCanvasElement, uiRoot: HTMLElement, readonly quality: QualityLevel, save: SaveData | null, vehicle: VehicleChoice = save?.vehicle ?? 'car') {
     this.progress = save?.progress ?? newProgress();
     this.progress.profile = normalizeProfile(this.progress.profile);
+    if (this.progress.profile.name === DEFAULT_PROFILE.name) this.progress.profile.name = storedName() || this.progress.profile.name;
     this.progress.trips ??= [];
     prepareAirfield(world);
     // correcciones del mapa que salieron de las anotaciones del modo debug
@@ -118,9 +120,8 @@ export class Game {
 
     // punto de partida: frente al portal de VGB (o la partida guardada)
     const st = world.meta.start;
-    // primera vez: unos 40 m antes del punto original, así la autoestopista del Portal se ve a lo lejos y no encima
-    const back = save ? 0 : 40;
-    const carX = save?.car.x ?? st.x - Math.cos(st.heading) * back, carN = save?.car.n ?? st.n - Math.sin(st.heading) * back, carH = save?.car.heading ?? st.heading;
+    const spawn = save ? { ...st } : firstSpawn(st);
+    const carX = save?.car.x ?? spawn.x, carN = save?.car.n ?? spawn.n, carH = save?.car.heading ?? spawn.heading;
     const car = new Vehicle(this.physics, world, scene, new THREE.Vector3(carX, world.heightAt(carX, carN) + 1, -carN), carH);
     const person = new Character(this.physics, scene);
     person.setAppearance(this.progress.profile.appearance);
@@ -182,6 +183,12 @@ export class Game {
       profile: () => this.progress.profile,
       openProfile: () => this.openProfile(),
       chime: () => this.audio.chime(),
+      setName: (name) => {
+        this.progress.profile = normalizeProfile({ ...this.progress.profile, name });
+        storeName(name);
+        this.online.refreshLook();
+        this.save();
+      },
     });
     this.hud.mapView.overlay = (g, project, metersPerPx) => {
       for (const o of this.online.remotes.markers()) {
