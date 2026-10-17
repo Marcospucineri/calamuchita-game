@@ -182,6 +182,13 @@ export class HUD {
     this.flightInfo.querySelector('span')!.textContent = `${Math.max(0, Math.round(altitude))} m sobre el terreno`;
   }
 
+  setDescent(state: 'freefall' | 'parachute' | null, altitude: number): void {
+    this.flightInfo.classList.toggle('hidden', !state);
+    if (!state) return;
+    this.flightInfo.querySelector('b')!.textContent = state === 'freefall' ? 'Caída libre' : 'En paracaídas';
+    this.flightInfo.querySelector('span')!.textContent = `${Math.max(0, Math.round(altitude))} m sobre el terreno`;
+  }
+
   setFound(n: number): void {
     this.postales.querySelector('.badge b')!.textContent = String(n);
   }

@@ -131,9 +131,9 @@ export class Online {
 
   private localState(): { state: NetState; obj: THREE.Object3D } {
     const p = this.d.player;
-    const mode: NetMode = p.flying ? 'p' : p.mode === 'onfoot' || p.mode === 'exiting' ? 'f' : 'c';
-    const obj = mode === 'p' ? p.plane.mesh : mode === 'f' ? p.person.mesh : p.car.mesh;
-    const speed = mode === 'p' ? p.plane.speed : mode === 'f' ? p.person.speed : p.car.speed;
+    const mode: NetMode = p.person.airState === 'parachute' ? 'h' : p.person.airState === 'freefall' ? 'd' : p.flying ? 'p' : p.mode === 'onfoot' || p.mode === 'exiting' ? 'f' : 'c';
+    const obj = mode === 'p' ? p.plane.mesh : (mode === 'f' || mode === 'd' || mode === 'h') ? p.person.mesh : p.car.mesh;
+    const speed = mode === 'p' ? p.plane.speed : (mode === 'f' || mode === 'd' || mode === 'h') ? p.person.speed : p.car.speed;
     const q = obj.quaternion;
     return { obj, state: { x: obj.position.x, y: obj.position.y, z: obj.position.z, qx: q.x, qy: q.y, qz: q.z, qw: q.w, speed, mode } };
   }

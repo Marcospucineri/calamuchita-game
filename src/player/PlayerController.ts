@@ -14,6 +14,7 @@ export type VehicleChoice = 'car' | 'plane';
 export class PlayerController {
   mode: Mode = 'driving';
   private timer = 0;
+  private selected: VehicleChoice = 'car';
 
   constructor(readonly car: Vehicle, readonly person: Character, private physics: Physics, private w: WorldData, readonly plane: Aircraft) {
     car.occupied = true;
@@ -28,15 +29,16 @@ export class PlayerController {
   }
 
   get vehicle(): VehicleChoice {
-    return this.flying ? 'plane' : 'car';
+    return this.selected;
   }
 
   /** Cada salida en avioneta empieza en la pista; el auto conserva su posición. */
   selectVehicle(vehicle: VehicleChoice): void {
-    this.timer = 0;
+    this.timer = 0; this.selected = vehicle;
     this.person.despawn();
     this.car.occupied = vehicle === 'car';
     this.plane.active = vehicle === 'plane';
+    this.plane.occupied = vehicle === 'plane';
     this.plane.reset();
     if (vehicle === 'car') {
       const f = this.car.forward();
@@ -54,18 +56,62 @@ export class PlayerController {
   }
 
   canExit(): boolean {
-    return this.mode === 'driving' && Math.abs(this.car.speed) < 2.5;
+    return this.flying || this.mode === 'driving' && Math.abs(this.car.speed) < 2.5;
   }
 
-  canEnter(): boolean {
-    if (this.mode !== 'onfoot') return false;
-    return this.person.position.distanceTo(this.car.doorPoint()) < 3.2 || this.person.position.distanceTo(this.car.position) < 3.4;
+  private nearbyVehicle(): VehicleChoice | null {
+    if (this.mode !== 'onfoot' || this.person.airborne) return null;
+    const carDistance = Math.min(this.person.position.distanceTo(this.car.doorPoint()), this.person.position.distanceTo(this.car.position));
+    const planeDistance = this.person.position.distanceTo(this.plane.position);
+    if (this.plane.grounded && planeDistance < 8 && (carDistance >= 3.4 || planeDistance / 2 < carDistance)) return 'plane';
+    return carDistance < 3.4 ? 'car' : null;
+  }
+
+  canEnter(): boolean { return this.nearbyVehicle() !== null; }
+
+  get action(): { label: string; short: string } | null {
+    if (this.person.airState === 'freefall') return { label: 'Abrir paracaídas', short: 'Abrir paracaídas' };
+    if (this.flying) return this.plane.grounded ? { label: 'Bajarse de la avioneta', short: 'Bajar' } : { label: 'Saltar de la avioneta', short: 'Saltar' };
+    if (this.canExit()) return { label: 'Bajarse del auto', short: 'Bajar' };
+    const nearby = this.nearbyVehicle();
+    return nearby ? { label: nearby === 'plane' ? 'Subir a la avioneta' : 'Subir al auto', short: nearby === 'plane' ? 'Subir a avioneta' : 'Subir' } : null;
+  }
+
+  restoreOnFoot(position: THREE.Vector3, vehicle: VehicleChoice): void {
+    this.selected = vehicle; this.mode = 'onfoot'; this.timer = 0;
+    this.car.occupied = false; this.plane.occupied = false; this.plane.active = false;
+    this.person.spawn(position, 0);
+  }
+
+  private exitPlane(): void {
+    const plane = this.plane;
+    const inAir = !plane.grounded;
+    const forward = plane.forward();
+    const spot = new THREE.Vector3(inAir ? -4 : .2, 0, -6.4).applyQuaternion(plane.rotation).add(plane.position);
+    if (inAir) spot.y = Math.max(spot.y, this.w.heightAtXZ(spot.x, spot.z) + .25);
+    if (!inAir) spot.y = this.physics.castDown(spot.x, spot.z, plane.position.y + 4, 20) ?? this.w.heightAtXZ(spot.x, spot.z);
+    this.car.occupied = false;
+    this.person.spawn(spot, Math.atan2(forward.x, forward.z));
+    if (inAir) this.person.startFalling({ x: forward.x * plane.speed, y: Math.min(-2, forward.y * plane.speed), z: forward.z * plane.speed });
+    plane.release();
+    this.mode = 'onfoot'; this.timer = 0;
+    bus.emit('player:mode', { mode: 'onfoot' });
+  }
+
+  private enterPlane(): void {
+    this.person.despawn(); this.car.occupied = false;
+    this.plane.active = this.plane.occupied = true;
+    this.selected = 'plane'; this.mode = 'flying';
+    bus.emit('player:mode', { mode: 'flying' });
   }
 
   /** Acciones de un solo disparo (se leen una vez por frame). */
   handleActions(input: InputState): void {
     if (input.interactPressed) {
-      if (this.canExit()) this.exitCar();
+      if (this.person.airState === 'freefall') this.person.openParachute();
+      else if (this.flying) this.exitPlane();
+      else if (this.canExit()) this.exitCar();
+      else if (this.nearbyVehicle() === 'plane') this.enterPlane();
       else if (this.canEnter()) this.enterCar();
     }
     if (input.resetPressed && this.mode === 'driving') this.car.reset();
@@ -92,6 +138,7 @@ export class PlayerController {
   }
 
   private enterCar(): void {
+    this.selected = 'car';
     this.person.despawn();
     this.car.occupied = true;
     this.mode = 'entering';

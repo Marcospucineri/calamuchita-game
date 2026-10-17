@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { paintedMaterial } from '../render/PaintedMaterial';
-import { clockTexture, roofTexture, stoneTexture, wallTexture } from '../render/Textures';
+import { clockTexture, roofTexture, stoneTexture, wallTexture, windowNightTexture } from '../render/Textures';
 import { Building, WorldData } from './WorldData';
 
 interface Builder { pos: number[]; uv: number[]; idx: number[] }
@@ -69,8 +69,9 @@ export class Buildings {
       this.house(b, style, getB(walls, `${tile}|${style}`), getB(roofs, `${tile}|${ROOF[style].kind}`));
     }
 
+    const windowNight = windowNightTexture();
     const wallMats: Record<string, THREE.Material> = {};
-    for (const s of Object.keys(ROOF)) wallMats[s] = paintedMaterial({ map: wallTexture(s), brushScale: 0.6, brushAmount: 0.12, side: THREE.DoubleSide });
+    for (const s of Object.keys(ROOF)) wallMats[s] = paintedMaterial({ map: wallTexture(s), nightMap: windowNight, brushScale: 0.6, brushAmount: 0.12, side: THREE.DoubleSide });
     const roofMats: Record<string, THREE.Material> = {};
     for (const k of ['teja', 'chapa', 'tejuela'] as RoofKind[]) roofMats[k] = paintedMaterial({ map: roofTexture(k), brushScale: 0.5, brushAmount: 0.15, side: THREE.DoubleSide });
 

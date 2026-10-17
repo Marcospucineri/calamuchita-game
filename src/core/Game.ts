@@ -34,6 +34,7 @@ import { MUSIC_OPTIONS } from '../engine/Music';
 import { Buildings } from '../world/Buildings';
 import { Landmarks } from '../world/Landmarks';
 import { Roads } from '../world/Roads';
+import { StreetLighting } from '../world/StreetLighting';
 import { Sky } from '../world/Sky';
 import { Terrain } from '../world/Terrain';
 import { Vegetation } from '../world/Vegetation';
@@ -60,6 +61,7 @@ export class Game {
   readonly music = new Music();
   private shops: ShopDecor;
   private sky: Sky;
+  private lighting: StreetLighting;
   private loop: GameLoop;
   private state: InputState;
   private time = 0;
@@ -106,6 +108,7 @@ export class Game {
     new MapExtrasView(mapExtras, scene);
     const landmarks = new Landmarks(world, scene);
     const airfield = new Airfield(world, scene);
+    this.lighting = new StreetLighting(world, scene, this.renderer, this.sky, quality === 'baja');
     lap('buildings');
     this.vegetation = new Vegetation(world, scene, q.treeNearRadius, q.treeFarRadius, q.shadows);
     lap('vegetation');
@@ -142,16 +145,21 @@ export class Game {
       return hit ? hit.timeOfImpact : null;
     };
     this.cameraRig.yaw = Math.atan2(-Math.cos(carH), Math.sin(carH));
-    if (vehicle === 'plane') {
+    if (save?.plane) plane.park(save.plane.x, save.plane.n, save.plane.heading);
+    if (save?.mode === 'onfoot' && vehicle === (save.vehicle ?? 'car')) {
+      const ground = world.heightAt(save.player.x, save.player.n);
+      const air = save.air && Number.isFinite(save.air.y) && save.air.y > ground + 1 && save.air.y < ground + 1200 ? save.air : null;
+      this.player.restoreOnFoot(new THREE.Vector3(save.player.x, air?.y ?? ground, -save.player.n), vehicle);
+      if (air) {
+        person.startFalling({ x: 0, y: Number.isFinite(air.vy) ? Math.max(-55, Math.min(-2, air.vy)) : -2, z: 0 });
+        if (air.state === 'parachute') person.openParachute();
+      }
+      this.cameraRig.setMode('onfoot');
+    } else if (vehicle === 'plane') {
       this.player.selectVehicle('plane');
       this.cameraRig.setMode('flying');
       const f = plane.forward();
       this.cameraRig.yaw = Math.atan2(-f.x, -f.z);
-    } else if (save?.mode === 'onfoot') {
-      car.occupied = false;
-      person.spawn(new THREE.Vector3(save.player.x, world.heightAt(save.player.x, save.player.n), -save.player.n), 0);
-      this.player.mode = 'onfoot';
-      this.cameraRig.setMode('onfoot');
     }
 
     this.input = new Input(canvas, uiRoot);
@@ -237,7 +245,7 @@ export class Game {
     });
     lap('pois');
     this.hud.setFound(this.pois.discovered.size);
-    this.hud.setVehicle(vehicle);
+    this.hud.setVehicle(this.player.flying ? 'plane' : 'car');
 
     this.hud.onTravel = (x, n, label) => this.fastTravel(x, n, label);
     this.hud.onVehicleChange = (choice) => this.selectVehicle(choice);
@@ -251,7 +259,12 @@ export class Game {
 
     bus.on('player:mode', (e) => {
       this.cameraRig.setMode(e.mode);
-      if (e.mode === 'onfoot') this.cameraRig.yaw = Math.atan2(-this.player.car.forward().x, -this.player.car.forward().z);
+      this.hud.setVehicle(e.mode === 'flying' ? 'plane' : 'car');
+      if (e.mode === 'onfoot') {
+        const forward = this.player.vehicle === 'plane' ? this.player.plane.forward() : this.player.car.forward();
+        this.cameraRig.yaw = Math.atan2(-forward.x, -forward.z);
+        if (this.player.person.airborne) { this.cameraRig.setView('alta'); this.cameraRig.snap(); }
+      }
     });
 
     this.loop = new GameLoop((dt) => this.fixed(dt), (dt, a) => this.frame(dt, a));
@@ -359,7 +372,7 @@ export class Game {
       { id: 'photo', label: 'Foto del paseo · compartir', icon: 'modo-foto' },
       { id: 'profile', label: 'Mi nombre, aspecto y cuenta' },
       ...(accounts.user ? [{ id: 'ranking', label: 'Ranking · kilómetros de valle' }] : []),
-      { id: 'vehicle', label: this.player.flying ? 'Volver al auto' : 'Volar en avioneta', icon: this.player.flying ? 'auto' : 'avioneta' },
+      { id: 'vehicle', label: this.player.vehicle === 'plane' ? 'Volver al auto' : 'Volar en avioneta', icon: this.player.vehicle === 'plane' ? 'auto' : 'avioneta' },
       { id: 'options', label: 'Opciones' },
       { id: 'controls', label: 'Controles' },
       { id: 'credits', label: 'Créditos' },
@@ -377,7 +390,7 @@ export class Game {
       }
       else if (id === 'profile') this.openProfile();
       else if (id === 'ranking') { this.save(); openRanking(); }
-      else if (id === 'vehicle') { overlays.closeAll(); this.selectVehicle(this.player.flying ? 'car' : 'plane'); }
+      else if (id === 'vehicle') { overlays.closeAll(); this.selectVehicle(this.player.vehicle === 'plane' ? 'car' : 'plane'); }
       else if (id === 'options') this.openOptions();
       else if (id === 'controls') overlays.openControls(!!this.input.touch);
       else if (id === 'credits') overlays.openCredits();
@@ -393,12 +406,13 @@ export class Game {
   private fixed(dt: number): void {
     if (this.paused || this.debug?.god) return;
     const mode = this.player.mode;
+    const wasAirborne = this.player.person.airborne;
     const position = this.player.position;
     const from = { x: position.x, y: position.y, z: position.z };
     this.player.fixedUpdate(dt, this.state, this.cameraRig.yaw);
     this.physics.step();
     this.player.postStep();
-    if (mode === this.player.mode && (mode === 'driving' || mode === 'flying' || mode === 'onfoot')) {
+    if (!wasAirborne && !this.player.person.airborne && mode === this.player.mode && (mode === 'driving' || mode === 'flying' || mode === 'onfoot')) {
       const category: TravelCategory = mode === 'driving' ? 'car' : mode === 'flying' ? 'plane' : 'foot';
       distances.record(category, dt, from, this.player.position);
     }
@@ -439,7 +453,7 @@ export class Game {
     const cockpit = flying
       ? { quat: p.plane.mesh.quaternion, eye: p.plane.pilotEye, roll: true }
       : driving ? { quat: p.car.mesh.quaternion, eye: p.car.driverEye, roll: false } : undefined;
-    this.cameraRig.update(dt, target, forward, speed, this.state, cockpit);
+    this.cameraRig.update(dt, target, forward, speed, this.state, cockpit, p.person.airborne);
     // primera persona: interior del auto visible y sin dibujar el propio cuerpo a pie
     p.car.setInterior(this.cameraRig.isFirstPerson && driving);
     p.plane.setCockpit(this.cameraRig.isFirstPerson && flying);
@@ -449,9 +463,10 @@ export class Game {
     this.vegetation.update(target);
     this.physics.updateTrees(this.vegetation, target.x, -target.z);
     this.renderer.followShadow(target);
+    this.lighting.update(this.renderer.camera.position);
     this.sky.update(this.renderer.camera.position, this.time);
     if (!this.paused) {
-      this.pois.update(dt, target.x, -target.z, driving || flying, flying ? target.y : undefined);
+      this.pois.update(dt, target.x, -target.z, driving || flying || p.person.airborne, flying || p.person.airborne ? target.y : undefined);
       const ride = this.hitchhikers.update(dt, target.x, -target.z, speed, driving);
       this.ridePanel.classList.toggle('hidden', !ride || !!this.hitchhikers.active);
       if (ride) this.ridePanel.querySelector('p')!.textContent = ride;
@@ -469,16 +484,18 @@ export class Game {
     const heading = driving || flying ? Math.atan2(-forward.z, forward.x) : Math.atan2(Math.cos(this.cameraRig.yaw), -Math.sin(this.cameraRig.yaw)) ;
     this.hud.update(target.x, -target.z, driving || flying ? speed * 3.6 : null, driving ? p.car.surface : null);
     if (flying) this.hud.setFlight(p.plane.altitude, p.plane.grounded);
+    else this.hud.setDescent(p.person.airState, p.person.position.y - this.world.heightAtXZ(p.person.position.x, p.person.position.z));
     const cam = driving || flying ? null : p.car.position;
     this.miniZoom += ((flying ? 0.4 : driving ? THREE.MathUtils.lerp(1, 0.55, Math.min(1, Math.abs(speed) / 30)) : 1.6) - this.miniZoom) * Math.min(1, dt * 2);
     this.hud.minimap.draw(target.x, -target.z, heading, cam ? cam.x : null, cam ? -cam.z : null, this.pois.discovered, this.miniZoom, this.hitchhikers.active);
-    const action = p.canExit() ? 'Bajarse del auto' : p.canEnter() ? 'Subir al auto' : null;
+    const action = p.action;
     if (this.input.touch) {
-      this.input.touch.setAction(action ? (p.canExit() ? 'Bajar' : 'Subir') : null);
       this.input.touch.setDriving(driving);
       this.input.touch.setFlying(flying);
+      this.input.touch.setAction(action?.short ?? null);
+      this.input.touch.setAirborne(p.person.airborne);
       this.hud.setPrompt(null);
-    } else this.hud.setPrompt(action ? `<kbd>E</kbd> ${action}` : null);
+    } else this.hud.setPrompt(action ? `<kbd>E</kbd> ${action.label}` : null);
     const live = (driving || flying) && !this.paused;
     this.audio.update(live, live ? speed : 0, flying ? p.plane.throttleOut : p.car.throttleOut, flying ? 0 : p.car.rough, flying);
 
@@ -504,6 +521,7 @@ export class Game {
     this.terrain.update(cam.position);
     this.vegetation.update(look);
     this.renderer.followShadow(look);
+    this.lighting.update(cam.position);
     this.sky.update(cam.position, this.time);
     this.hud.update(cam.position.x, -cam.position.z, null, null);
     this.hud.minimap.draw(cam.position.x, -cam.position.z, Math.atan2(-dir.z, dir.x), null, null, this.pois.discovered, 1.2);
@@ -522,6 +540,8 @@ export class Game {
       vehicle: p.vehicle,
       car: { x: p.car.position.x, n: -p.car.position.z, heading: Math.atan2(-f.z, f.x) },
       player: { x: p.person.position.x, n: -p.person.position.z },
+      plane: p.plane.grounded ? { x: p.plane.position.x, n: -p.plane.position.z, heading: Math.atan2(-p.plane.forward().z, p.plane.forward().x) } : undefined,
+      air: p.person.airState ? { state: p.person.airState, y: p.person.position.y, vy: p.person.verticalSpeed } : undefined,
       discovered: [...this.pois.discovered],
       paint: p.car.paint,
       progress: this.progress,
@@ -550,12 +570,8 @@ export class Game {
       }
     }
     const p = this.player;
-    if (!p.driving) {
-      p.person.despawn();
-      p.car.occupied = true;
-      p.mode = 'driving';
-      bus.emit('player:mode', { mode: 'driving' });
-    }
+    if (!p.driving) p.selectVehicle('car');
+
     const heading = best ? Math.atan2(best.dirN, best.dirX) : 0;
     this.teleport(best ? best.px : x, best ? best.pn : n, heading);
     this.cameraRig.yaw = Math.atan2(-Math.cos(heading), Math.sin(heading));
@@ -570,7 +586,7 @@ export class Game {
     if (vehicle === this.player.vehicle) return;
     if (vehicle === 'plane') this.hitchhikers.cancel();
     this.player.selectVehicle(vehicle);
-    this.hud.setVehicle(vehicle);
+    this.hud.setVehicle(this.player.flying ? 'plane' : 'car');
     const forward = vehicle === 'plane' ? this.player.plane.forward() : this.player.car.forward();
     this.cameraRig.yaw = Math.atan2(-forward.x, -forward.z);
     this.cameraRig.snap();

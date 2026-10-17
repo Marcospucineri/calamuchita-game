@@ -338,7 +338,7 @@ export class Landmarks {
     // farol en el remate
     const lamp = new THREE.Group();
     lamp.add(new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.6, 0.45), paintedMaterial({ color: 0x333333 })));
-    const glass = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.42, 0.36), paintedMaterial({ color: 0xfff1c4, emissive: 0x6b5520 }));
+    const glass = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.42, 0.36), paintedMaterial({ color: 0xfff1c4, emissive: 0xffc46b, nightOnly: true }));
     lamp.add(glass);
     const cap = new THREE.Mesh(new THREE.ConeGeometry(0.38, 0.35, 4), paintedMaterial({ color: 0x333333 }));
     cap.position.y = 0.45;
@@ -692,7 +692,7 @@ export class Landmarks {
     for (const d of [-22, 0, 22]) for (const sd of [-1, 1]) {
       const lamp = new THREE.Group();
       lamp.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 3.4, 6), this.dark), 0, 1.7, 0));
-      lamp.add(at(new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), paintedMaterial({ color: 0xfff3d0, emissive: 0x554422 })), 0, 3.5, 0));
+      lamp.add(at(new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), paintedMaterial({ color: 0xfff3d0, emissive: 0xffc46b, nightOnly: true })), 0, 3.5, 0));
       place(lamp, cx + ux * d - un * sd * 1.9, cn + un * d + ux * sd * 1.9, 0);
     }
   }
@@ -753,7 +753,7 @@ export class Landmarks {
       if (k % 2 === 0) {
         const lamp = new THREE.Group();
         lamp.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 3.4, 6), this.dark), 0, 1.7, 0));
-        lamp.add(at(new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), paintedMaterial({ color: 0xfff3d0, emissive: 0x554422 })), 0, 3.5, 0));
+        lamp.add(at(new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), paintedMaterial({ color: 0xfff3d0, emissive: 0xffc46b, nightOnly: true })), 0, 3.5, 0));
         place(lamp, l.x + Math.cos(a) * (d + 8) + Math.sin(a) * 1.9, l.n + Math.sin(a) * (d + 8) - Math.cos(a) * 1.9, 0);
       }
     }

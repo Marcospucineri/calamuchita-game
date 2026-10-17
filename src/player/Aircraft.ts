@@ -9,6 +9,7 @@ import { bus } from '../core/EventBus';
 export class Aircraft {
   readonly mesh: THREE.Group;
   active = false;
+  occupied = false;
   speed = 0;
   throttleOut = 0;
   altitude = 0;
@@ -65,8 +66,12 @@ export class Aircraft {
 
   /** Cada salida y cada recuperación comienza en la cabecera del aeroclub de VGB. */
   reset(): void {
-    this.currPos.set(this.spawn.x, this.world.heightAt(this.spawn.x, this.spawn.n) + Aircraft.CLEARANCE, -this.spawn.n);
-    this.heading = this.spawn.heading;
+    this.park(this.spawn.x, this.spawn.n, this.spawn.heading);
+  }
+
+  park(x: number, n: number, heading: number): void {
+    this.currPos.set(x, this.world.heightAt(x, n) + Aircraft.CLEARANCE, -n);
+    this.heading = heading;
     this.speed = this.throttleOut = this.altitude = this.verticalSpeed = 0;
     this.pitch = this.groundPitch(this.currPos.x, -this.currPos.z);
     this.bank = 0;
@@ -79,16 +84,23 @@ export class Aircraft {
     this.mesh.quaternion.copy(this.currRot);
   }
 
+  release(): void {
+    this.occupied = false;
+    this.assistedClimb = false;
+    this.throttleOut = 0;
+    if (this.grounded) { this.speed = 0; this.active = false; }
+  }
+
   fixedUpdate(dt: number, input: InputState | null): void {
     // El avión estacionado no avanza ni modifica el último estado del vuelo.
-    if (!this.active || !input || dt <= 0) return;
+    if (!this.active || (!input && this.grounded) || dt <= 0) return;
     this.prevPos.copy(this.currPos);
     this.prevRot.copy(this.currRot);
 
-    const throttle = THREE.MathUtils.clamp(input.planeThrottle, 0, 1);
-    const brake = THREE.MathUtils.clamp(input.planeBrake, 0, 1);
-    const steer = THREE.MathUtils.clamp(input.steer, -1, 1);
-    const pitchInput = THREE.MathUtils.clamp(input.pitch, -1, 1);
+    const throttle = THREE.MathUtils.clamp((input?.planeThrottle ?? 0), 0, 1);
+    const brake = THREE.MathUtils.clamp((input?.planeBrake ?? 0), 0, 1);
+    const steer = THREE.MathUtils.clamp((input?.steer ?? 0), -1, 1);
+    const pitchInput = THREE.MathUtils.clamp((input?.pitch ?? -.2), -1, 1);
     // La potencia se conserva al soltar el acelerador para poder recorrer el valle cómodamente.
     this.throttleOut = THREE.MathUtils.clamp(this.throttleOut + (throttle * 0.65 - brake * 0.9) * dt, 0, 1);
     const drag = this.grounded ? 0.6 + this.speed * 0.045 : 0.6 + this.speed * 0.065;
@@ -185,7 +197,8 @@ export class Aircraft {
 
   private recover(reason: string): void {
     this.reset();
-    bus.emit('toast', { text: reason, sub: 'Volvimos a la pista del Aeroclub de Villa General Belgrano.' });
+    if (!this.occupied) this.active = false;
+    if (this.occupied) bus.emit('toast', { text: reason, sub: 'Volvimos a la pista del Aeroclub de Villa General Belgrano.' });
   }
 
   render(alpha: number, dt: number): void {

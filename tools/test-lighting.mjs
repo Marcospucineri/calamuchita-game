@@ -1,0 +1,58 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import * as THREE from 'three';
+import { createServer } from 'vite';
+const server = await createServer({configFile:false,server:{middlewareMode:true},appType:'custom',logLevel:'error'});
+try {
+  const {daylightAt,daylightForHour}=await server.ssrLoadModule('/src/world/DayNight.ts');
+  const date = new Date('2026-10-16T15:00:00Z');
+  assert.equal(daylightAt(new Date('2026-10-17T02:00:00Z')).hour,23,'Clock uses GMT−3, not browser timezone');
+  assert.equal(daylightForHour(13,date).day,1);
+  assert.equal(daylightForHour(0,date).night,1);
+  assert.ok(daylightForHour(8,date).sun.x>0,'Morning sun is in the east');
+  assert.ok(daylightForHour(18,date).sun.x<0,'Evening sun is in the west');
+  assert.ok(daylightForHour(13,date).sun.y>daylightForHour(8,date).sun.y,'Sun rises higher toward noon');
+  const summer=daylightForHour(19,new Date('2026-12-21T15:00:00Z'));
+  const winter=daylightForHour(19,new Date('2026-06-21T15:00:00Z'));
+  assert.ok(summer.elevation>winter.elevation,'Date changes the seasonal sun path');
+  for(let hour=0;hour<24;hour+=.1){const t=daylightForHour(hour,date);assert.ok(t.day>=0&&t.day<=1);assert.ok(Math.abs(Math.hypot(t.sun.x,t.sun.y,t.sun.z)-1)<1e-9);}
+  let sunrise, sunset;
+  for(let minute=0;minute<1440;minute++){const t=daylightForHour(minute/60,date);if(t.elevation>=0&&sunrise===undefined)sunrise=minute;if(t.elevation>=0)sunset=minute;}
+  assert.ok(sunrise>360&&sunrise<480);assert.ok(sunset>1080&&sunset<1260);
+  const before=daylightForHour(sunset/60,date),after=daylightForHour((sunset+1)/60,date);
+  assert.ok(Math.abs(before.day-after.day)<.04,'Sunset fades smoothly');
+  const {planStreetLamps, StreetLighting}=await server.ssrLoadModule('/src/world/StreetLighting.ts');
+  const road={id:1,name:'Avenida San Martín',ref:'',kind:'secondary',surface:'asphalt',bridge:false,width:7,major:true,p:[0,0,100,100,0,100]};
+  const world={roads:[road,{...road,id:2,name:'Calle vecinal'},{...road,id:3,bridge:true}],junctions:[[50,0,5]],meta:{towns:[{id:'vgb',x:0,n:0,r:1700}]},heightAt:()=>100};
+  const lamps=planStreetLamps(world);assert.equal(lamps.length,8,'Two blocks, two lamps on each side per block');
+  for(const block of new Set(lamps.map(p=>p.block)))for(const side of [-1,1])assert.equal(lamps.filter(p=>p.block===block&&p.side===side).length,2);
+  assert.ok(lamps.every(p=>Math.abs(p.n)>road.width/2),'Posts stand outside the road');
+  const cp={...world,meta:{towns:[{id:'vcp',x:0,n:0,r:2300}]},roads:[road,{...road,id:4,name:'Boulevard Los Reartes'}]};
+  assert.ok(planStreetLamps(cp).every(p=>p.road==='Boulevard Los Reartes'),'Ciudad Parque only gets its main boulevard');
+  const lr={...world,meta:{towns:[{id:'lr',x:0,n:0,r:1700}]}};
+  assert.ok(planStreetLamps(lr).every(p=>p.road==='Avenida San Martín'));
+  const real={roads:JSON.parse(fs.readFileSync('public/world/roads.json')),junctions:JSON.parse(fs.readFileSync('public/world/junctions.json')),meta:JSON.parse(fs.readFileSync('public/world/meta.json')),heightAt:()=>750};
+  const planned=planStreetLamps(real);
+  const counts=Object.fromEntries(['vgb','vcp','lr'].map(id=>[id,planned.filter(p=>p.town===id).length]));
+  assert.ok(Object.values(counts).every(n=>n>0));
+  const context=new Proxy({}, {get:()=>()=>{}});
+  globalThis.document={createElement:()=>({width:0,height:0,getContext:()=>context})};
+  globalThis.location={search:'?hora=23'};
+  const scene=new THREE.Scene();
+  const litWorld={...world,meta:{...world.meta,origin:{lat:-31.9765,lon:-64.559}}};
+  const lighting=new StreetLighting(litWorld,scene,{setDaylight:()=>{}},{setDaylight:()=>{}},true);
+  const pointLights=scene.children.filter(o=>o.isPointLight);
+  assert.equal(pointLights.length,4,'Mobile lighting uses a bounded point-light pool');
+  lighting.nextSelection=0;lighting.update(new THREE.Vector3(25,100,0));
+  assert.ok(pointLights.some(l=>l.intensity>0),'Lights illuminate streets at night');
+  lighting.forcedHour=13;lighting.seconds=-1;lighting.update(new THREE.Vector3(25,100,0));
+  assert.ok(pointLights.every(l=>l.intensity===0),'Street lights switch off by day');
+  const {paintedMaterial,sharedUniforms}=await server.ssrLoadModule('/src/render/PaintedMaterial.ts');
+  const material=paintedMaterial({nightMap:new THREE.Texture()});
+  const shader={uniforms:{},vertexShader:'#include <common>\n#include <project_vertex>',fragmentShader:'#include <common>\n#include <emissivemap_fragment>\n#include <opaque_fragment>'};
+  material.onBeforeCompile(shader,{});
+  assert.equal(shader.uniforms.uNight,sharedUniforms.uNight,'Window emissions follow the shared clock');
+  assert.ok(shader.fragmentShader.includes('totalEmissiveRadiance *= uNight'),'Windows glow only at night');
+  console.log('OK: GMT−3, amanecer/atardecer, orientación y estaciones; dos faroles por lado y cuadra. Luminarias:',counts);
+  console.log('16/10/2026 · sol sobre horizonte:',`${Math.floor(sunrise/60)}:${String(sunrise%60).padStart(2,'0')}`, 'a',`${Math.floor(sunset/60)}:${String(sunset%60).padStart(2,'0')}`);
+} finally {await server.close();}

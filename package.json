@@ -20,7 +20,9 @@
     "test:avatar": "node tools/test-avatar.mjs",
     "test:mobile": "node tools/test-mobile-hud.mjs",
     "test:ranking": "node tools/test-ranking.mjs",
-    "test:chat": "node tools/test-chat-sql.mjs"
+    "test:chat": "node tools/test-chat-sql.mjs",
+    "test:parachute": "node tools/test-parachute.mjs",
+    "test:lighting": "node tools/test-lighting.mjs"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.21.0",

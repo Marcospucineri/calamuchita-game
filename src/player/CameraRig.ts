@@ -92,7 +92,7 @@ export class CameraRig {
     if (i >= 0) { this.viewIndex = i; this.first = true; }
   }
 
-  update(dt: number, target: THREE.Vector3, targetForward: THREE.Vector3, speed: number, input: InputState, cockpit?: CockpitView): void {
+  update(dt: number, target: THREE.Vector3, targetForward: THREE.Vector3, speed: number, input: InputState, cockpit?: CockpitView, descending = false): void {
     this.setLens(this.isFirstPerson ? 0.05 : 0.5, this.isFirstPerson ? 68 : 55);
     if (this.isAerial) { this.updateAerial(dt, target, targetForward, speed, input); return; }
     if (this.isFirstPerson) { this.updateFirstPerson(dt, target, targetForward, input, cockpit); return; }
@@ -122,9 +122,9 @@ export class CameraRig {
       this.zoomFoot = THREE.MathUtils.clamp(this.zoomFoot + input.zoom * 0.1, 0.5, 2.2);
       this.yaw -= input.lookX * 0.005;
       this.pitch = THREE.MathUtils.clamp(this.pitch + input.lookY * 0.004, -0.15, 1.2);
-      this.dist = 5.5 * this.zoomFoot;
+      this.dist = (descending ? 15 : 5.5) * this.zoomFoot;
       const cp = Math.cos(this.pitch), sp = Math.sin(this.pitch);
-      const head = target.clone().add(new THREE.Vector3(0, 1.6, 0));
+      const head = target.clone().add(new THREE.Vector3(0, descending ? 2.8 : 1.6, 0));
       const desired = new THREE.Vector3(Math.sin(this.yaw) * cp * this.dist, sp * this.dist, Math.cos(this.yaw) * cp * this.dist).add(head);
       this.pivot.copy(head);
       this.apply(desired, head, 1 - Math.exp(-dt * 12));

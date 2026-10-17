@@ -6,6 +6,8 @@ export interface SaveData {
   vehicle?: 'car' | 'plane';
   car: { x: number; n: number; heading: number };
   player: { x: number; n: number };
+  plane?: { x: number; n: number; heading: number };
+  air?: { state: 'freefall' | 'parachute'; y: number; vy: number };
   discovered: string[];
   savedAt?: number;
   quality?: string;

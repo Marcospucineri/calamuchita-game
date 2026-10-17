@@ -301,3 +301,6 @@ body.touch .hud-btns [data-a="camera"] { display: grid; }
 .title-panel .name-row .profile-entry:hover { color: var(--crema); }
 .title-panel .name-row .profile-entry-arrow { margin: 0; font-size: 16px; color: var(--pasto); }
 .name-field .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.touch-ui.skydiving .tb-pedals { display: none; }
+.touch-ui.skydiving .tb-action { max-width: 210px; font-size: 15px; padding: 17px 22px; }

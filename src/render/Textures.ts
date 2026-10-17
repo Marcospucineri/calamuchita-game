@@ -297,3 +297,12 @@ export function cloudTexture(): THREE.CanvasTexture {
   return t;
 }
 
+
+/** Matches the glass panes of wallTexture; timber, frames and shutters remain dark. */
+export function windowNightTexture(): THREE.CanvasTexture {
+  const [c, g] = canvas(256, 192);
+  g.fillStyle = '#000000'; g.fillRect(0, 0, 256, 192);
+  g.fillStyle = '#fff4c8'; g.fillRect(94, 36, 68, 58);
+  g.fillStyle = '#000000'; g.fillRect(126, 34, 4, 62); g.fillRect(92, 63, 72, 4);
+  return tex(c);
+}

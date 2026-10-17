@@ -44,7 +44,7 @@ Al volver al auto, lo encontrás donde lo habías dejado. Se conservan las posta
 | Acelerar / frenar / marcha atrás | `W` / `S` (o flechas) | RT / LT |
 | Doblar / caminar | `A` `D` | stick izquierdo |
 | Freno de mano / saltar | `Espacio` | A |
-| Bajarse o subirse al auto | `E` | X / Y |
+| Entrar / salir del vehículo; abrir paracaídas | `E` | X / Y |
 | Correr (a pie) | `Shift` | B |
 | Mapa | `M` | Select |
 | Cambiar cámara | `C` | RB |
@@ -62,9 +62,11 @@ Al volver al auto, lo encontrás donde lo habías dejado. Se conservan las posta
 | Volver al aeroclub | `R` | LB |
 | Mapa / cámara / ayuda | `M` / `C` / `H` | Select / RB |
 
+Con **E** podés bajar de la avioneta en tierra o saltar en vuelo. En el aire caés en picada: volvé a pulsar **E** para abrir el paracaídas y dirigí el descenso con WASD / flechas. Al tocar suelo volvés a caminar. En mobile aparecen **Saltar** y **Abrir paracaídas**, y el joystick dirige el descenso. La caída no suma kilómetros a pie.
+
 En celular, usá el joystick para girar y los botones **Acelerar**, **Desacel.**, **Subir**, **Bajar** y **Aeroclub** para volar.
 
-La partida se guarda sola en el navegador y, al crear una cuenta, también en Supabase. Incluye nombre, aspecto, vehículo, posición del auto, postales y Serranos. Abrí el perfil desde el inicio o tocando la moneda durante el paseo. La avioneta vuelve al aeroclub al cargar; no se retoma en el aire. «Borrar la partida y empezar» también borra las postales.
+La partida se guarda sola en el navegador y, al crear una cuenta, también en Supabase. Incluye nombre, aspecto, vehículo, posición del auto, postales y Serranos. Abrí el perfil desde el inicio o tocando la moneda durante el paseo. La avioneta vuelve al aeroclub al cargar si estabas pilotando. Si habías bajado, conserva su posición en tierra; si estabas cayendo, se retoman la altura y el estado del paracaídas. «Borrar la partida y empezar» también borra las postales.
 
 Para probar el vuelo directamente: `http://localhost:5173/?auto=1&vehicle=plane` (agregá `&fresh=1` para borrar la partida).
 

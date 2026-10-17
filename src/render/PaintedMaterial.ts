@@ -21,12 +21,15 @@ export interface PaintedOptions {
   opacity?: number;
   alphaTest?: number;
   emissive?: THREE.ColorRepresentation;
+  nightMap?: THREE.Texture;
+  nightOnly?: boolean;
   polygonOffset?: number;
   rim?: number; // luz de borde
 }
 
 export const sharedUniforms = {
   uTime: { value: 0 },
+  uNight: { value: 0 },
 };
 
 export function paintedMaterial(o: PaintedOptions = {}): THREE.MeshToonMaterial {
@@ -41,7 +44,8 @@ export function paintedMaterial(o: PaintedOptions = {}): THREE.MeshToonMaterial 
     transparent: !!o.transparent,
     opacity: o.opacity ?? 1,
     alphaTest: o.alphaTest ?? 0,
-    emissive: o.emissive ?? 0x000000,
+    emissive: o.emissive ?? (o.nightMap ? 0xffcb80 : 0x000000),
+    emissiveMap: o.nightMap ?? null,
   });
   if (o.polygonOffset) {
     m.polygonOffset = true;
@@ -52,6 +56,7 @@ export function paintedMaterial(o: PaintedOptions = {}): THREE.MeshToonMaterial 
   const amount = o.brushAmount ?? 0.22;
   const rim = o.rim ?? 0.12;
   m.onBeforeCompile = (shader) => {
+    shader.uniforms.uNight = sharedUniforms.uNight;
     shader.uniforms.uBrush = { value: brush };
     shader.uniforms.uBrushScale = { value: scale };
     shader.uniforms.uBrushAmt = { value: amount };
@@ -74,7 +79,7 @@ export function paintedMaterial(o: PaintedOptions = {}): THREE.MeshToonMaterial 
       .replace(
         '#include <common>',
         `#include <common>
-        uniform sampler2D uBrush; uniform float uBrushScale; uniform float uBrushAmt; uniform float uRim;
+        uniform float uNight; uniform sampler2D uBrush; uniform float uBrushScale; uniform float uBrushAmt; uniform float uRim;
         varying vec3 vPaintWorld; varying vec3 vPaintNormal;`,
       )
       .replace(
@@ -98,12 +103,17 @@ export function paintedMaterial(o: PaintedOptions = {}): THREE.MeshToonMaterial 
         `{
           vec3 V = normalize(cameraPosition - vPaintWorld);
           float rimF = pow(1.0 - max(dot(normalize(vPaintNormal), V), 0.0), 3.0) * uRim;
-          outgoingLight += vec3(1.0, 0.95, 0.85) * rimF * max(vPaintNormal.y + 0.3, 0.0);
+          outgoingLight += vec3(1.0, 0.95, 0.85) * (1.0 - uNight * .8) * rimF * max(vPaintNormal.y + 0.3, 0.0);
         }
         #include <opaque_fragment>`,
       );
   };
+  const compile = m.onBeforeCompile;
+  if (o.nightMap || o.nightOnly) m.onBeforeCompile = function(shader, renderer) {
+    compile.call(this, shader, renderer);
+    shader.fragmentShader = shader.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n totalEmissiveRadiance *= uNight;');
+  };
   // las variantes comparten programa según parámetros
-  m.customProgramCacheKey = () => `painted-${scale}-${amount}-${rim}`;
+  m.customProgramCacheKey = () => `painted-${scale}-${amount}-${rim}-${!!o.nightMap || !!o.nightOnly}`;
   return m;
 }

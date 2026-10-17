@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Physics, RAPIER } from '../engine/Physics';
 import { InputState } from '../engine/Input';
 import { DEFAULT_PROFILE, type Appearance } from '../gameplay/Progress';
+import { createParachute } from './Parachute';
 import { paintedMaterial } from '../render/PaintedMaterial';
 
 const HALF_H = 0.55, RADIUS = 0.32;
@@ -16,6 +17,12 @@ export class Character {
   private legs: THREE.Object3D[] = [];
   private arms: THREE.Object3D[] = [];
   private vy = 0;
+  airState: 'freefall' | 'parachute' | null = null;
+  private drift = new THREE.Vector2();
+  private avatar!: THREE.Group;
+  readonly parachute = createParachute();
+  get airborne(): boolean { return this.airState !== null; }
+  get verticalSpeed(): number { return this.vy; }
   private grounded = false;
   private phase = 0;
   private prev = new THREE.Vector3();
@@ -37,11 +44,13 @@ export class Character {
     this.cc.setApplyImpulsesToDynamicBodies(true);
     this.buildModel();
     this.mesh.visible = false;
-    scene.add(this.mesh);
+    scene.add(this.mesh, this.parachute);
+    this.parachute.visible = false;
   }
 
   private buildModel(): void {
     const avatar = createAvatar();
+    this.avatar = avatar.mesh;
     this.mesh.add(avatar.mesh);
     this.legs = avatar.legs;
     this.arms = avatar.arms;
@@ -53,6 +62,7 @@ export class Character {
     materials.forEach((m) => m.dispose());
     this.mesh.clear();
     const avatar = createAvatar(appearance);
+    this.avatar = avatar.mesh;
     this.mesh.add(avatar.mesh);
     this.legs = avatar.legs;
     this.arms = avatar.arms;
@@ -68,14 +78,28 @@ export class Character {
     this.curr.copy(pos);
     this.prev.copy(pos);
     this.facing = facing;
-    this.vy = 0;
+    this.vy = 0; this.airState = null; this.grounded = false; this.drift.set(0, 0);
+    this.parachute.visible = false;
     this.active = true;
     this.collider.setEnabled(true);
     this.mesh.visible = true;
   }
 
+  startFalling(velocity: { x: number; y: number; z: number }): void {
+    this.airState = 'freefall';
+    this.vy = Math.min(-2, velocity.y);
+    this.drift.set(velocity.x, velocity.z);
+    this.grounded = false;
+  }
+
+  openParachute(): void {
+    if (this.airState !== 'freefall') return;
+    this.airState = 'parachute';
+    this.parachute.visible = true;
+  }
+
   despawn(): void {
-    this.active = false;
+    this.active = false; this.airState = null; this.parachute.visible = false;
     this.collider.setEnabled(false);
     this.mesh.visible = false;
     this.body.setTranslation({ x: 0, y: -1000, z: 0 }, false);
@@ -90,21 +114,22 @@ export class Character {
     let mz = fz * input.moveY + rz * input.moveX;
     const len = Math.hypot(mx, mz);
     if (len > 1) { mx /= len; mz /= len; }
-    const sp = input.run ? RUN : WALK;
+    const sp = this.airborne ? (this.airState === 'parachute' ? 6 : 2.5) : input.run ? RUN : WALK;
     if (len > 0.05) {
       const target = Math.atan2(mx, mz);
       let d = target - this.facing;
       d = Math.atan2(Math.sin(d), Math.cos(d));
       this.facing += d * Math.min(1, dt * 12);
     }
-    if (this.grounded && input.jump) { this.vy = JUMP; this.grounded = false; }
-    this.vy -= GRAVITY * dt;
-    if (this.vy < -40) this.vy = -40;
-    const desired = { x: mx * sp * dt, y: this.vy * dt, z: mz * sp * dt };
+    if (!this.airborne && this.grounded && input.jump) { this.vy = JUMP; this.grounded = false; }
+    if (this.airState === 'parachute') this.vy += THREE.MathUtils.clamp(-4.5 - this.vy, -12 * dt, 65 * dt);
+    else this.vy = Math.max(this.airborne ? -55 : -40, this.vy - GRAVITY * dt);
+    if (this.airborne) this.drift.lerp(new THREE.Vector2(mx * sp, mz * sp), 1 - Math.exp(-dt * (this.airState === 'parachute' ? 2.5 : .65)));
+    const desired = { x: (this.airborne ? this.drift.x : mx * sp) * dt, y: this.vy * dt, z: (this.airborne ? this.drift.y : mz * sp) * dt };
     this.cc.computeColliderMovement(this.collider, desired);
     const m = this.cc.computedMovement();
     this.grounded = this.cc.computedGrounded();
-    if (this.grounded && this.vy < 0) this.vy = -1;
+    if (this.grounded && this.vy < 0) { this.vy = -1; this.airState = null; this.parachute.visible = false; this.drift.set(0, 0); }
     const t = this.body.translation();
     this.body.setNextKinematicTranslation({ x: t.x + m.x, y: t.y + m.y, z: t.z + m.z });
     this.speed = Math.hypot(m.x, m.z) / dt;
@@ -121,6 +146,18 @@ export class Character {
     if (!this.active) return;
     this.mesh.position.lerpVectors(this.prev, this.curr, alpha);
     this.mesh.rotation.y = this.facing - Math.PI / 2;
+    this.avatar.rotation.z = this.airState === 'freefall' ? Math.PI : 0;
+    this.avatar.position.y = this.airState === 'freefall' ? 1.85 : 0;
+    this.parachute.position.copy(this.mesh.position);
+    this.parachute.rotation.y = this.mesh.rotation.y;
+    this.parachute.visible = this.airState === 'parachute';
+    if (this.airborne) {
+      this.phase += dt;
+      this.legs.forEach((leg) => { leg.rotation.z = 0; });
+      this.arms.forEach((arm) => { arm.rotation.z = this.airState === 'parachute' ? 2.6 : 1.1; });
+      this.parachute.rotation.z = Math.sin(this.phase * 1.5) * .025;
+      return;
+    }
     // animación de caminata
     const s = Math.min(this.speed, RUN);
     this.phase += dt * (3 + s * 1.6) * (s > 0.2 ? 1 : 0);

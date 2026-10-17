@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { createParachute } from '../player/Parachute';
 import { createAvatar } from '../player/Character';
 import type { Vehicle } from '../player/Vehicle';
 import type { Aircraft } from '../player/Aircraft';
@@ -53,7 +54,7 @@ interface RemotePeer {
   shown: boolean;
 }
 
-const HEIGHT: Record<NetMode, number> = { c: 2.1, f: 2.25, p: 3.6 };
+const HEIGHT: Record<NetMode, number> = { c: 2.1, f: 2.25, p: 3.6, d: 2.25, h: 6.5 };
 const tmpV = new THREE.Vector3();
 const tmpF = new THREE.Vector3();
 
@@ -131,10 +132,14 @@ export class RemotePlayers {
   }
 
   private build(p: RemotePeer, mode: NetMode): Visual {
-    if (mode === 'f') {
+    if (mode === 'f' || mode === 'd' || mode === 'h') {
       const a = createAvatar(p.look.appearance);
-      this.scene.add(a.mesh);
-      return { mode, group: a.mesh, legs: a.legs, arms: a.arms, wheels: [], propeller: null, dispose: () => disposeObject(a.mesh) };
+      const group = new THREE.Group(); group.add(a.mesh);
+      if (mode === 'd') { a.mesh.rotation.z = Math.PI; a.mesh.position.y = 1.85; }
+      if (mode === 'h') group.add(createParachute());
+      if (mode !== 'f') a.arms.forEach((arm) => { arm.rotation.z = mode === 'h' ? 2.6 : 1.1; });
+      this.scene.add(group);
+      return { mode, group, legs: mode === 'f' ? a.legs : [], arms: a.arms, wheels: [], propeller: null, dispose: () => disposeObject(group) };
     }
     if (mode === 'p') {
       const r = this.plane.makeRemote();

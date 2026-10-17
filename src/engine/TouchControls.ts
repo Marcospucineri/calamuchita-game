@@ -134,9 +134,11 @@ export class TouchControls {
 
   /** Muestra el botón de acción con el texto que corresponda ("Bajar" / "Subir"), o lo oculta. */
   setAction(label: string | null): void {
-    this.action.classList.toggle('hidden', this.flying || !label);
+    this.action.classList.toggle('hidden', !label);
     if (label && this.action.textContent !== label) this.action.textContent = label;
   }
+
+  setAirborne(on: boolean): void { this.root.classList.toggle('skydiving', on); }
 
   setDriving(driving: boolean): void {
     if (this.driving === driving) return;
@@ -157,7 +159,7 @@ export class TouchControls {
     this.root.classList.toggle('flying', this.flying);
     this.root.classList.toggle('onfoot', !this.driving && !this.flying);
     for (const b of this.root.querySelectorAll('.tb-flight')) b.classList.toggle('hidden', !this.flying);
-    if (this.flying) this.setAction(null);
+
     const gas = this.root.querySelector('[data-k="gas"]') as HTMLButtonElement;
     const label = this.flying || this.driving ? 'Acelerar' : 'Saltar';
     gas.innerHTML = `${icon(this.flying || this.driving ? 'pedal' : 'jump')}<span>${label}</span>`;

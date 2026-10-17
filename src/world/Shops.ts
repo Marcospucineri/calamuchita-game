@@ -422,6 +422,14 @@ function storefrontTexture(kind: ShopKind): THREE.CanvasTexture {
 }
 
 /** Atlas de carteles: columna 0 centroeuropeos, columna 1 comunes; 16 filas de 512×64. */
+function storefrontNightTexture(): THREE.CanvasTexture {
+  const [c, g] = canvas(512, 256);
+  g.fillStyle = '#000000'; g.fillRect(0, 0, 512, 256);
+  g.fillStyle = '#ffe4b0';
+  g.fillRect(18, 36, 182, 194); g.fillRect(312, 36, 182, 194); g.fillRect(222, 48, 68, 110);
+  return tex(c, true);
+}
+
 function signAtlas(): THREE.CanvasTexture {
   const [c, g] = canvas(1024, 1024);
   const fit = (text: string, font: (s: number) => string, max: number, size: number) => {
@@ -506,8 +514,8 @@ export class ShopDecor {
       this.group.add(m);
     };
     const opts = { brushScale: 0.6, brushAmount: 0.06, side: THREE.DoubleSide, polygonOffset: 2 } as const;
-    mk(fronts.centro, paintedMaterial({ ...opts, map: storefrontTexture('centro') }));
-    mk(fronts.local, paintedMaterial({ ...opts, map: storefrontTexture('local') }));
+    mk(fronts.centro, paintedMaterial({ ...opts, map: storefrontTexture('centro'), nightMap: storefrontNightTexture() }));
+    mk(fronts.local, paintedMaterial({ ...opts, map: storefrontTexture('local'), nightMap: storefrontNightTexture() }));
     mk(signs, paintedMaterial({ ...opts, map: signAtlas(), brushAmount: 0.03 }));
     const aw = new THREE.Mesh(geo(awnings), paintedMaterial({ ...opts, map: awningTexture(), polygonOffset: 0 }));
     aw.castShadow = true; aw.receiveShadow = true;

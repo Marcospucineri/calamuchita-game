@@ -118,7 +118,8 @@ export class Overlays {
       <div class="opt"><h4>En el celular</h4><ul class="keys">
         <li><span class="k">Joystick</span> girar, caminar o inclinar la avioneta</li>
         <li><span class="k">Acelerar · Freno</span> los pedales de la derecha (a pie, saltar)</li>
-        <li><span class="k">Bajar · Subir</span> aparece cuando estás cerca del auto</li>
+        <li><span class="k">Bajar · Subir</span> para entrar o salir del vehículo</li>
+        <li><span class="k">Saltar · Abrir paracaídas</span> salir de la avioneta en vuelo y frenar la caída; dirigí el descenso con el joystick</li>
         <li><span class="k">Arrastrar</span> en la pantalla para mirar alrededor</li>
         <li><span class="k">Ocultar</span> deja solo lo esencial para manejar</li>
       </ul></div>
@@ -126,7 +127,7 @@ export class Overlays {
       <div class="opt"><h4>Auto y a pie</h4><ul class="keys">
         <li><span class="k"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span> manejar o caminar</li>
         <li><span class="k"><kbd>Espacio</kbd></span> freno de mano o saltar</li>
-        <li><span class="k"><kbd>E</kbd></span> bajarse o subirse al auto</li>
+        <li><span class="k"><kbd>E</kbd></span> entrar o salir del vehículo; en caída libre, abrir el paracaídas</li>
         <li><span class="k"><kbd>Shift</kbd></span> correr</li>
         <li><span class="k"><kbd>R</kbd></span> enderezar el auto</li>
       </ul></div>

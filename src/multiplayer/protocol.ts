@@ -18,8 +18,8 @@ export const STALE_MS = 15000;
 export const CHAT_MAX = 120;
 
 /** c = auto, f = a pie, p = avioneta. */
-export type NetMode = 'c' | 'f' | 'p';
-const MODES: NetMode[] = ['c', 'f', 'p'];
+export type NetMode = 'c' | 'f' | 'p' | 'd' | 'h';
+const MODES: NetMode[] = ['c', 'f', 'p', 'd', 'h'];
 
 export interface NetState { x: number; y: number; z: number; qx: number; qy: number; qz: number; qw: number; speed: number; mode: NetMode }
 export interface NetLook { name: string; appearance: Appearance; paint: string }
